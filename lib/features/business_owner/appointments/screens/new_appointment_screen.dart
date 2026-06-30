@@ -80,6 +80,22 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     }
   }
 
+  Future<void> _addNewCustomer() async {
+    if (_tenantId == null) return;
+    final created = await showModalBottomSheet<CustomerModel>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _QuickAddCustomerSheet(tenantId: _tenantId!, repo: _repo),
+    );
+    if (created != null && mounted) {
+      setState(() {
+        _customers = [created, ..._customers];
+        _selectedCustomer = created;
+      });
+    }
+  }
+
   Future<void> _pickDate() async {
     final d = await showDatePicker(
       context: context,
@@ -112,12 +128,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     setState(() => _submitting = true);
     try {
       await _repo.createAppointment(_tenantId!, {
-        'customerId': _selectedCustomer!.personId,
-        'serviceId': _selectedService!.serviceId,
-        'staffId': _selectedStaff!.personId,
+        'customerPersonId': _selectedCustomer!.personId,
+        'assignedToPersonTenantRoleId': _selectedStaff!.personTenantRoleId,
+        'services': [{'serviceId': _selectedService!.serviceId, 'quantity': 1}],
         'appointmentDate': _selectedDate.toIso8601String().split('T').first,
         'startTime': _timeStr(_selectedTime),
-        'notes': _notesCtrl.text.trim(),
+        if (_notesCtrl.text.trim().isNotEmpty) 'notes': _notesCtrl.text.trim(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -153,7 +169,28 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(QDSpace.screenPad),
                     children: [
-                      _label('Customer *'),
+                      Row(
+                        children: [
+                          const Expanded(child: _LabelText('Customer *')),
+                          GestureDetector(
+                            onTap: _addNewCustomer,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add_circle_outline_rounded,
+                                    size: 15, color: QDPalette.primary600),
+                                SizedBox(width: 4),
+                                Text('New Customer',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: QDPalette.primary600,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
                       _dropdown<CustomerModel>(
                         hint: 'Select customer',
                         value: _selectedCustomer,
@@ -246,11 +283,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: QDPalette.neutral500)),
+        child: _LabelText(text),
       );
 
   Widget _dropdown<T>({
@@ -306,6 +339,147 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                     fontWeight: FontWeight.w500,
                     color: QDPalette.neutral800)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LabelText extends StatelessWidget {
+  final String text;
+  const _LabelText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: QDPalette.neutral500));
+  }
+}
+
+// ── Quick Add Customer Sheet (inline in New Appointment) ──────────────────────
+
+class _QuickAddCustomerSheet extends StatefulWidget {
+  final int tenantId;
+  final BusinessRepository repo;
+  const _QuickAddCustomerSheet({required this.tenantId, required this.repo});
+
+  @override
+  State<_QuickAddCustomerSheet> createState() => _QuickAddCustomerSheetState();
+}
+
+class _QuickAddCustomerSheetState extends State<_QuickAddCustomerSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _mobileCtrl = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _mobileCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _saving = true);
+    try {
+      final parts = _nameCtrl.text.trim().split(' ');
+      final firstName = parts.first;
+      final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : null;
+      final customer = await widget.repo.createCustomer(widget.tenantId, {
+        'firstName': firstName,
+        if (lastName != null && lastName.isNotEmpty) 'lastName': lastName,
+        'mobileNumber': _mobileCtrl.text.trim(),
+      });
+      if (mounted) Navigator.pop(context, customer);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(QDRadius.sheet)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 20, QDSpace.screenPad, QDSpace.screenPad),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: QDPalette.neutral200, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const Text('Quick Add Customer',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                          color: QDPalette.neutral900)),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _nameCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name *',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Name required' : null,
+                  ),
+                  const SizedBox(height: QDSpace.x3),
+                  TextFormField(
+                    controller: _mobileCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Mobile Number',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: QDSpace.x5),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.person_add_rounded),
+                      label: Text(_saving ? 'Creating...' : 'Create & Select'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: QDPalette.primary600,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(QDRadius.sm)),
+                        elevation: 0,
+                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -182,62 +182,91 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
     );
   }
 
+  Future<void> _openPayment(InvoiceModel inv) async {
+    if (_tenantId == null) return;
+    if (inv.isPaid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice already paid')),
+      );
+      return;
+    }
+    final paid = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CollectPaymentSheet(
+        tenantId: _tenantId!,
+        invoice: inv,
+        repo: _repo,
+      ),
+    );
+    if (paid == true) _load();
+  }
+
   Widget _card(InvoiceModel inv) {
     final sc = _statusColor(inv.status);
     final bg = _statusBg(inv.status);
-    return Container(
-      margin: const EdgeInsets.only(bottom: QDSpace.x2),
-      padding: const EdgeInsets.all(QDSpace.cardPad),
-      decoration: BoxDecoration(
-        color: QDPalette.surfaceCard,
-        borderRadius: BorderRadius.circular(QDRadius.card),
-        border: Border.all(color: QDPalette.neutral100),
-        boxShadow: QDShadow.card,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(QDRadius.iconChip),
+    return GestureDetector(
+      onTap: () => _openPayment(inv),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: QDSpace.x2),
+        padding: const EdgeInsets.all(QDSpace.cardPad),
+        decoration: BoxDecoration(
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.card),
+          border: Border.all(color: QDPalette.neutral100),
+          boxShadow: QDShadow.card,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(QDRadius.iconChip),
+              ),
+              child: Icon(Icons.receipt_outlined, color: sc, size: 22),
             ),
-            child: Icon(Icons.receipt_outlined, color: sc, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(inv.customerName,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(inv.customerName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: QDPalette.neutral800)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '#${inv.invoiceId} · ${QDDateUtils.formatDate(inv.invoiceDate)}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                        color: QDPalette.neutral400, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(QDCurrency.format(inv.totalAmount),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: QDPalette.neutral800)),
-                const SizedBox(height: 2),
-                Text(
-                  '#${inv.invoiceId} · ${QDDateUtils.formatDate(inv.invoiceDate)}',
-                  style: const TextStyle(
-                      color: QDPalette.neutral400, fontSize: 12),
-                ),
+                        color: QDPalette.neutral900,
+                        letterSpacing: -0.3)),
+                const SizedBox(height: 4),
+                QDStatusChip.fromStatus(inv.status),
+                if (!inv.isPaid) ...[
+                  const SizedBox(height: 4),
+                  const Icon(Icons.payments_outlined,
+                      size: 14, color: QDPalette.primary500),
+                ],
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(QDCurrency.format(inv.totalAmount),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: QDPalette.neutral900,
-                      letterSpacing: -0.3)),
-              const SizedBox(height: 4),
-              QDStatusChip.fromStatus(inv.status),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -267,5 +296,188 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
         height: 36,
         color: QDPalette.neutral100,
         margin: const EdgeInsets.symmetric(horizontal: 4));
+  }
+}
+
+// ── Collect Payment Sheet ──────────────────────────────────────────────────────
+
+class _CollectPaymentSheet extends StatefulWidget {
+  final int tenantId;
+  final InvoiceModel invoice;
+  final BusinessRepository repo;
+
+  const _CollectPaymentSheet({
+    required this.tenantId,
+    required this.invoice,
+    required this.repo,
+  });
+
+  @override
+  State<_CollectPaymentSheet> createState() => _CollectPaymentSheetState();
+}
+
+class _CollectPaymentSheetState extends State<_CollectPaymentSheet> {
+  final _amountCtrl = TextEditingController();
+  String _method = 'CASH';
+  bool _saving = false;
+
+  static const _methods = ['CASH', 'CARD', 'UPI', 'BANK_TRANSFER'];
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl.text = widget.invoice.balance.toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _collect() async {
+    final amount = double.tryParse(_amountCtrl.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid amount')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await widget.repo.collectPayment(widget.tenantId, widget.invoice.invoiceId, {
+        'amount': amount,
+        'paymentMethod': _method,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = widget.invoice;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(QDRadius.sheet)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 20, QDSpace.screenPad, QDSpace.screenPad),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36, height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: QDPalette.neutral200, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const Text('Collect Payment',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                        color: QDPalette.neutral900)),
+                const SizedBox(height: 6),
+                Text('${inv.customerName} · #${inv.invoiceId}',
+                    style: const TextStyle(color: QDPalette.neutral400, fontSize: 13)),
+                const SizedBox(height: 16),
+                // Summary
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: QDPalette.neutral50,
+                    borderRadius: BorderRadius.circular(QDRadius.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      _summaryItem('Total', QDCurrency.format(inv.totalAmount), QDPalette.neutral700),
+                      _summaryItem('Paid', QDCurrency.format(inv.paidAmount), QDPalette.success500),
+                      _summaryItem('Balance', QDCurrency.format(inv.balance), QDPalette.error500),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Amount to Collect *',
+                    prefixText: '₹ ',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Payment Method',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: QDPalette.neutral500)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _methods.map((m) {
+                    final selected = m == _method;
+                    return ChoiceChip(
+                      label: Text(m),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _method = m),
+                      selectedColor: QDPalette.primary100,
+                      labelStyle: TextStyle(
+                        color: selected ? QDPalette.primary700 : QDPalette.neutral600,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: QDSpace.x5),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _saving ? null : _collect,
+                    icon: _saving
+                        ? const SizedBox(width: 18, height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.payments_rounded),
+                    label: Text(_saving ? 'Processing...' : 'Collect Payment'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: QDPalette.success500,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(QDRadius.sm)),
+                      elevation: 0,
+                      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryItem(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 11, color: QDPalette.neutral400)),
+        ],
+      ),
+    );
   }
 }

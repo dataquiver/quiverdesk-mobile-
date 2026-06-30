@@ -19,6 +19,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
   BusinessModel? _data;
   bool _isLoading = true;
   String? _error;
+  bool _actioning = false;
 
   @override
   void initState() {
@@ -36,6 +37,162 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
     }
   }
 
+  Future<void> _suspend() async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Suspend Business'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Suspending ${_data!.businessName}. This will block all logins.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Reason *',
+                hintText: 'Enter reason for suspension',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: QDPalette.error500),
+            child: const Text('Suspend'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    if (reasonCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reason is required')),
+      );
+      return;
+    }
+    setState(() => _actioning = true);
+    try {
+      await _repo.suspendBusiness(widget.businessId, reasonCtrl.text.trim());
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Business suspended'),
+              backgroundColor: QDPalette.error500),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actioning = false);
+    }
+  }
+
+  Future<void> _activate() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Activate Business'),
+        content: Text('Activate ${_data!.businessName}? They will regain access.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: QDPalette.success500),
+            child: const Text('Activate'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _actioning = true);
+    try {
+      await _repo.activateBusiness(widget.businessId);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Business activated'),
+              backgroundColor: QDPalette.success500),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actioning = false);
+    }
+  }
+
+  Future<void> _changePlan() async {
+    final plans = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE', 'TRIAL'];
+    String? selected = _data?.subscriptionPlan?.toUpperCase();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
+          title: const Text('Change Plan'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: plans.map((p) => InkWell(
+              onTap: () => setInner(() => selected = p),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Radio<String>(
+                      value: p,
+                      groupValue: selected,
+                      activeColor: QDPalette.primary600,
+                      onChanged: (v) => setInner(() => selected = v),
+                    ),
+                    Text(p, style: const TextStyle(fontSize: 14, color: QDPalette.neutral800)),
+                  ],
+                ),
+              ),
+            )).toList(),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Change'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || selected == null || !mounted) return;
+    setState(() => _actioning = true);
+    try {
+      await _repo.changePlan(widget.businessId, selected!);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Plan changed to $selected')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actioning = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,6 +205,14 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
           _data?.businessName ?? 'Business Detail',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: QDPalette.neutral900),
         ),
+        actions: [
+          if (_actioning)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: QDPalette.primary500)),
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: QDPalette.neutral100),
@@ -162,7 +327,81 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
             ],
           ),
         ),
+
+        // Admin Actions
+        Padding(
+          padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 0, QDSpace.screenPad, QDSpace.x6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Admin Actions',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                      color: QDPalette.neutral800, letterSpacing: -0.2)),
+              const SizedBox(height: QDSpace.cardGap),
+              Row(
+                children: [
+                  if (b.subscriptionStatus != null &&
+                      ['ACTIVE', 'TRIAL', 'PENDING'].contains(b.subscriptionStatus!.toUpperCase()))
+                    Expanded(
+                      child: _actionButton(
+                        'Suspend',
+                        Icons.block_rounded,
+                        QDPalette.error500,
+                        QDPalette.errorBg,
+                        _actioning ? null : _suspend,
+                      ),
+                    ),
+                  if (b.subscriptionStatus != null &&
+                      b.subscriptionStatus!.toUpperCase() == 'SUSPENDED') ...[
+                    Expanded(
+                      child: _actionButton(
+                        'Activate',
+                        Icons.check_circle_outline_rounded,
+                        QDPalette.success500,
+                        QDPalette.successBg,
+                        _actioning ? null : _activate,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _actionButton(
+                      'Change Plan',
+                      Icons.swap_horiz_rounded,
+                      QDPalette.primary600,
+                      QDPalette.primary50,
+                      _actioning ? null : _changePlan,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _actionButton(String label, IconData icon, Color color, Color bg, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(QDRadius.sm),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text(label,
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 

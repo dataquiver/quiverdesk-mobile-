@@ -46,6 +46,54 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
+  void _showEditSheet(ServiceModel service) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: QDPalette.surfaceCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(QDRadius.sheet))),
+      builder: (_) => _AddServiceSheet(
+        tenantId: _tenantId!,
+        repo: _repo,
+        onSaved: _load,
+        editService: service,
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(ServiceModel service) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Service'),
+        content: Text('Delete "${service.serviceName}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: QDPalette.error500),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || _tenantId == null) return;
+    try {
+      await _repo.deleteService(_tenantId!, service.serviceId);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
   void _showAddSheet() {
     showModalBottomSheet(
       context: context,
@@ -90,7 +138,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: QDSpace.cardGap),
                         itemBuilder: (_, i) =>
-                            _ServiceCard(service: _services![i]),
+                            _ServiceCard(
+                              service: _services![i],
+                              onEdit: () => _showEditSheet(_services![i]),
+                              onDelete: () => _confirmDelete(_services![i]),
+                            ),
                       ),
                     ),
     );
@@ -99,7 +151,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
 class _ServiceCard extends StatelessWidget {
   final ServiceModel service;
-  const _ServiceCard({required this.service});
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  const _ServiceCard({required this.service, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -169,6 +223,26 @@ class _ServiceCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(width: 4),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: QDPalette.neutral400, size: 20),
+            onSelected: (v) {
+              if (v == 'edit') onEdit();
+              if (v == 'delete') onDelete();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Row(children: [
+                Icon(Icons.edit_outlined, size: 16, color: QDPalette.neutral600),
+                SizedBox(width: 8),
+                Text('Edit'),
+              ])),
+              const PopupMenuItem(value: 'delete', child: Row(children: [
+                Icon(Icons.delete_outline_rounded, size: 16, color: QDPalette.error500),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(color: QDPalette.error500)),
+              ])),
+            ],
+          ),
         ],
       ),
     );
@@ -179,8 +253,9 @@ class _AddServiceSheet extends StatefulWidget {
   final int tenantId;
   final BusinessRepository repo;
   final VoidCallback onSaved;
+  final ServiceModel? editService;
   const _AddServiceSheet(
-      {required this.tenantId, required this.repo, required this.onSaved});
+      {required this.tenantId, required this.repo, required this.onSaved, this.editService});
 
   @override
   State<_AddServiceSheet> createState() => _AddServiceSheetState();
@@ -188,11 +263,15 @@ class _AddServiceSheet extends StatefulWidget {
 
 class _AddServiceSheetState extends State<_AddServiceSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _price = TextEditingController();
-  final _duration = TextEditingController(text: '30');
-  String _category = 'HAIR';
+  late final _name = TextEditingController(text: widget.editService?.serviceName ?? '');
+  late final _price = TextEditingController(
+      text: widget.editService != null ? widget.editService!.price.toStringAsFixed(0) : '');
+  late final _duration = TextEditingController(
+      text: widget.editService != null ? '${widget.editService!.durationMinutes}' : '30');
+  late String _category = widget.editService?.category ?? 'HAIR';
   bool _loading = false;
+
+  bool get _isEdit => widget.editService != null;
 
   static const _categories = [
     'HAIR', 'SKIN', 'NAIL', 'MASSAGE', 'DENTAL', 'GENERAL'
@@ -202,13 +281,18 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
     try {
-      await widget.repo.createService(widget.tenantId, {
+      final payload = {
         'serviceName': _name.text.trim(),
         'price': double.parse(_price.text),
         'durationMinutes': int.parse(_duration.text),
         'category': _category,
         'isActive': true,
-      });
+      };
+      if (_isEdit) {
+        await widget.repo.updateService(widget.tenantId, widget.editService!.serviceId, payload);
+      } else {
+        await widget.repo.createService(widget.tenantId, payload);
+      }
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -234,8 +318,8 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Service',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+            Text(_isEdit ? 'Edit Service' : 'Add Service',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
                     color: QDPalette.neutral900)),
             const SizedBox(height: QDSpace.x5),
             _field(_name, 'Service Name', required: true),
@@ -258,7 +342,9 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
             ),
             const SizedBox(height: QDSpace.x5),
             QDButton(
-                label: 'Save Service', isLoading: _loading, onPressed: _save),
+                label: _isEdit ? 'Update Service' : 'Save Service',
+                isLoading: _loading,
+                onPressed: _save),
           ],
         ),
       ),

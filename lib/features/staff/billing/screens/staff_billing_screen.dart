@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../../../app/themes.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/invoice_model.dart';
 import '../../../../core/utils/currency_utils.dart';
-import '../../../../core/widgets/qd_loading.dart';
-import '../../../../core/widgets/qd_error.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/qd_empty_state.dart';
+import '../../../../core/widgets/qd_error.dart';
+import '../../../../core/widgets/qd_loading.dart';
+import '../../repository/staff_repository.dart';
 
 class StaffBillingScreen extends StatefulWidget {
   const StaffBillingScreen({super.key});
@@ -18,7 +17,7 @@ class StaffBillingScreen extends StatefulWidget {
 }
 
 class _StaffBillingScreenState extends State<StaffBillingScreen> {
-  final _dio = ApiClient.instance;
+  final _repo = StaffRepository();
   List<InvoiceModel> _invoices = [];
   bool _loading = true;
   String? _error;
@@ -32,52 +31,52 @@ class _StaffBillingScreenState extends State<StaffBillingScreen> {
 
   Future<void> _init() async {
     final bizId = await TokenStorage.getBusinessId();
-    setState(() => _tenantId = bizId != null ? int.tryParse(bizId) : null);
-    _load();
+    _tenantId = bizId != null ? int.tryParse(bizId) : null;
+    await _load();
   }
 
   Future<void> _load() async {
     if (_tenantId == null) return;
     setState(() { _loading = true; _error = null; });
     try {
-      final res = await _dio.get(ApiEndpoints.staffInvoices(_tenantId!));
-      final body = res.data;
-      List<dynamic> list;
-      if (body is List) {
-        list = body;
-      } else if (body is Map) {
-        list = (body['items'] ?? body['data'] ?? body['invoices'] ?? []) as List<dynamic>;
-      } else {
-        list = [];
+      final raw = await _repo.getInvoices(_tenantId!);
+      if (mounted) {
+        setState(() {
+          _invoices = raw.map((e) => InvoiceModel.fromJson(e)).toList();
+          _loading = false;
+        });
       }
-      setState(() {
-        _invoices = list.map((e) => InvoiceModel.fromJson(e as Map<String, dynamic>)).toList();
-        _loading = false;
-      });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Billing'),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
+        ],
       ),
       body: _loading
           ? const QDLoading()
           : _error != null
               ? QDError(message: _error!, onRetry: _load)
               : _invoices.isEmpty
-                  ? const QDEmptyState(title: 'No Invoices', subtitle: 'No billing records found.')
+                  ? const QDEmptyState(
+                      title: 'No Invoices',
+                      subtitle: 'No billing records found for you.',
+                      icon: Icons.receipt_long_outlined,
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                      color: QDPalette.primary500,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(QDSpace.screenPad),
                         itemCount: _invoices.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _InvoiceCard(invoice: _invoices[i]),
                       ),
                     ),
@@ -91,74 +90,92 @@ class _InvoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('dd MMM yyyy');
     final isPaid = invoice.isPaid;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    final sc = isPaid ? QDPalette.success500 : QDPalette.warning500;
+    final bg = isPaid ? QDPalette.successBg : QDPalette.warningBg;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: QDSpace.cardGap),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
+      decoration: BoxDecoration(
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: bg, borderRadius: BorderRadius.circular(QDRadius.iconChip)),
+                child: Icon(Icons.receipt_outlined, color: sc, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(invoice.customerName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            color: QDPalette.neutral800)),
+                    if (invoice.customerPhone != null)
+                      Text(invoice.customerPhone!,
+                          style: const TextStyle(
+                              fontSize: 12, color: QDPalette.neutral400)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(QDCurrency.format(invoice.totalAmount),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700,
+                          color: QDPalette.neutral900, letterSpacing: -0.3)),
+                  const SizedBox(height: 4),
+                  QDStatusChip.fromStatus(invoice.status),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '#${invoice.invoiceId} · ${QDDateUtils.formatDate(invoice.invoiceDate)}',
+            style: const TextStyle(color: QDPalette.neutral400, fontSize: 12),
+          ),
+          if (invoice.items.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(height: 1, color: QDPalette.neutral100),
+            const SizedBox(height: 8),
+            ...invoice.items.take(3).map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Row(
                     children: [
-                      Text(invoice.customerName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      if (invoice.customerPhone != null)
-                        Text(invoice.customerPhone!,
-                            style: const TextStyle(fontSize: 12, color: QDColors.textSecondary)),
+                      Expanded(
+                        child: Text(item.serviceName,
+                            style: const TextStyle(
+                                color: QDPalette.neutral500, fontSize: 12)),
+                      ),
+                      Text(QDCurrency.format(item.total),
+                          style: const TextStyle(
+                              color: QDPalette.neutral700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500)),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isPaid ? QDColors.successLight : QDColors.warningLight,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    invoice.status,
-                    style: TextStyle(
-                      color: isPaid ? QDColors.success : QDColors.warning,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(fmt.format(invoice.invoiceDate),
-                    style: const TextStyle(fontSize: 12, color: QDColors.textHint)),
-                Text(QDCurrency.format(invoice.totalAmount),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            if (invoice.items.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Divider(),
-              ...invoice.items.take(3).map((item) => Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item.serviceName, style: const TextStyle(fontSize: 12, color: QDColors.textSecondary)),
-                        Text(QDCurrency.format(item.total), style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  )),
-              if (invoice.items.length > 3)
-                Text('+${invoice.items.length - 3} more items',
-                    style: const TextStyle(fontSize: 11, color: QDColors.textHint)),
-            ],
+                )),
+            if (invoice.items.length > 3)
+              Text('+${invoice.items.length - 3} more items',
+                  style: const TextStyle(
+                      fontSize: 11, color: QDPalette.neutral400)),
           ],
-        ),
+        ],
       ),
     );
   }

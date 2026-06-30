@@ -63,7 +63,7 @@ class _QDBottomNav extends StatelessWidget {
 
   static const _items = [
     _NavDef(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
-    _NavDef(Icons.calendar_today_outlined, Icons.calendar_today_rounded, 'Appointments'),
+    _NavDef(Icons.calendar_today_outlined, Icons.calendar_today_rounded, 'Appts'),
     _NavDef(Icons.people_outline_rounded, Icons.people_rounded, 'Customers'),
     _NavDef(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Billing'),
     _NavDef(Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Reports'),

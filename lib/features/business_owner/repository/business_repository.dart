@@ -96,9 +96,36 @@ class BusinessRepository {
     return _toList(body).map((e) => ServiceModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  Future<CustomerModel> createCustomer(int tenantId, Map<String, dynamic> data) async {
+    final res = await _dio.post(ApiEndpoints.customers(tenantId), data: data);
+    return CustomerModel.fromJson(_mapData(res));
+  }
+
+  Future<InvoiceModel> collectPayment(int tenantId, int invoiceId, Map<String, dynamic> data) async {
+    final res = await _dio.post(ApiEndpoints.invoicePayment(tenantId, invoiceId), data: data);
+    return InvoiceModel.fromJson(_mapData(res));
+  }
+
+  Future<Map<String, dynamic>> createInventoryItem(int tenantId, Map<String, dynamic> data) async {
+    final res = await _dio.post(ApiEndpoints.inventory(tenantId), data: data);
+    return _mapData(res);
+  }
+
+  Future<void> submitAppointmentFeedback(int tenantId, int appointmentId, Map<String, dynamic> data) async {
+    await _dio.post(ApiEndpoints.appointmentFeedback(tenantId, appointmentId), data: data);
+  }
+
   Future<ServiceModel> createService(int tenantId, Map<String, dynamic> data) async {
     final res = await _dio.post(ApiEndpoints.services(tenantId), data: data);
     return ServiceModel.fromJson(_mapData(res));
+  }
+
+  Future<void> updateService(int tenantId, int serviceId, Map<String, dynamic> data) async {
+    await _dio.put(ApiEndpoints.serviceDetail(tenantId, serviceId), data: data);
+  }
+
+  Future<void> deleteService(int tenantId, int serviceId) async {
+    await _dio.delete(ApiEndpoints.serviceDetail(tenantId, serviceId));
   }
 
   Future<List<StaffMemberModel>> getStaff(int tenantId) async {
@@ -110,6 +137,10 @@ class BusinessRepository {
   Future<StaffMemberModel> addStaff(int tenantId, Map<String, dynamic> data) async {
     final res = await _dio.post(ApiEndpoints.staff(tenantId), data: data);
     return StaffMemberModel.fromJson(_mapData(res));
+  }
+
+  Future<void> removeStaff(int tenantId, int personTenantRoleId) async {
+    await _dio.delete(ApiEndpoints.staffDetail(tenantId, personTenantRoleId));
   }
 
   Future<List<Map<String, dynamic>>> getInventory(int tenantId) async {

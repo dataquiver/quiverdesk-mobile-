@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/appointment_model.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -40,7 +41,8 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     if (_tenantId == null) return;
     setState(() { _isLoading = true; _error = null; });
     try {
-      final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
       final items = await _repo.getAppointments(_tenantId!, date: dateStr);
       if (mounted) setState(() { _items = items; _isLoading = false; });
     } catch (e) {
@@ -61,48 +63,48 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
     }
   }
 
-  Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'SCHEDULED' => QDColors.scheduled,
-    'CONFIRMED' => QDColors.confirmed,
-    'IN_PROGRESS' => QDColors.inProgress,
-    'COMPLETED' => QDColors.completed,
-    'CANCELLED' => QDColors.cancelled,
-    _ => QDColors.textHint,
-  };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('My Appointments'),
         actions: [
-          IconButton(icon: const Icon(Icons.calendar_month_outlined), onPressed: _pickDate),
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            onPressed: _pickDate,
+          ),
         ],
       ),
       body: Column(
         children: [
           Container(
-            color: QDColors.surface,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: QDPalette.surfaceCard,
+            padding: const EdgeInsets.symmetric(
+                horizontal: QDSpace.screenPad, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, size: 16, color: QDColors.primary),
+                const Icon(Icons.calendar_today_outlined,
+                    size: 16, color: QDPalette.primary500),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _pickDate,
                   child: Text(
                     QDDateUtils.dayLabel(_selectedDate),
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: QDColors.primary, fontSize: 14),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: QDPalette.primary600,
+                        fontSize: 14),
                   ),
                 ),
                 const Spacer(),
                 Text('${_items.length} appointments',
-                    style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                    style: const TextStyle(
+                        color: QDPalette.neutral400, fontSize: 13)),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Container(height: 1, color: QDPalette.neutral100),
           Expanded(
             child: _isLoading
                 ? const QDLoading()
@@ -116,8 +118,9 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                           )
                         : RefreshIndicator(
                             onRefresh: _load,
+                            color: QDPalette.primary500,
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(QDSpace.screenPad),
                               itemCount: _items.length,
                               itemBuilder: (_, i) => _card(_items[i]),
                             ),
@@ -129,15 +132,18 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
   }
 
   Widget _card(AppointmentModel a) {
-    final sc = _statusColor(a.status);
     return GestureDetector(
-      onTap: () => context.push('/staff/appointments/${a.appointmentId}'),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        context.push('/staff/appointments/${a.appointmentId}');
+      },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: QDSpace.x2),
         decoration: BoxDecoration(
-          color: QDColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: QDColors.border),
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.card),
+          border: Border.all(color: QDPalette.neutral100),
+          boxShadow: QDShadow.card,
         ),
         child: Row(
           children: [
@@ -145,11 +151,9 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
               width: 4,
               height: 80,
               decoration: BoxDecoration(
-                color: sc,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
+                color: QDStatusChip.colorFor(a.status),
+                borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(QDRadius.card)),
               ),
             ),
             Expanded(
@@ -162,14 +166,20 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(a.customerName,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: QDPalette.neutral800)),
                           const SizedBox(height: 3),
                           Text(a.serviceName,
-                              style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                              style: const TextStyle(
+                                  color: QDPalette.neutral500, fontSize: 13)),
                           const SizedBox(height: 3),
                           Text(QDDateUtils.formatTime(a.startTime),
                               style: const TextStyle(
-                                  color: QDColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+                                  color: QDPalette.primary500,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13)),
                         ],
                       ),
                     ),
@@ -177,23 +187,18 @@ class _StaffAppointmentsScreenState extends State<StaffAppointmentsScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: sc.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(a.status.replaceAll('_', ' '),
-                              style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w600)),
-                        ),
+                        QDStatusChip.fromStatus(a.status),
                         if (a.durationMinutes != null) ...[
                           const SizedBox(height: 4),
                           Text('${a.durationMinutes} min',
-                              style: const TextStyle(color: QDColors.textHint, fontSize: 12)),
+                              style: const TextStyle(
+                                  color: QDPalette.neutral400, fontSize: 12)),
                         ],
                       ],
                     ),
-                    const Icon(Icons.chevron_right, color: QDColors.textHint, size: 18),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: QDPalette.neutral300, size: 18),
                   ],
                 ),
               ),

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../../app/themes.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/customer_model.dart';
 import '../../../../core/utils/currency_utils.dart';
-import '../../../../core/widgets/qd_loading.dart';
-import '../../../../core/widgets/qd_error.dart';
 import '../../../../core/widgets/qd_empty_state.dart';
+import '../../../../core/widgets/qd_error.dart';
+import '../../../../core/widgets/qd_loading.dart';
+import '../../repository/staff_repository.dart';
 
 class StaffCustomersScreen extends StatefulWidget {
   const StaffCustomersScreen({super.key});
@@ -17,12 +16,13 @@ class StaffCustomersScreen extends StatefulWidget {
 }
 
 class _StaffCustomersScreenState extends State<StaffCustomersScreen> {
-  final _dio = ApiClient.instance;
+  final _repo = StaffRepository();
   List<CustomerModel> _customers = [];
   bool _loading = true;
   String? _error;
   final _searchCtrl = TextEditingController();
   int? _tenantId;
+  String _search = '';
 
   @override
   void initState() {
@@ -38,81 +38,85 @@ class _StaffCustomersScreenState extends State<StaffCustomersScreen> {
 
   Future<void> _init() async {
     final bizId = await TokenStorage.getBusinessId();
-    setState(() => _tenantId = bizId != null ? int.tryParse(bizId) : null);
-    _load();
+    _tenantId = bizId != null ? int.tryParse(bizId) : null;
+    await _load();
   }
 
-  Future<void> _load({String? search}) async {
+  Future<void> _load() async {
     if (_tenantId == null) return;
     setState(() { _loading = true; _error = null; });
     try {
-      final res = await _dio.get(
-        ApiEndpoints.staffCustomers(_tenantId!),
-        queryParameters: {
-          if (search != null && search.isNotEmpty) 'search': search,
-          'pageSize': 50,
-        },
-      );
-      final body = res.data;
-      List<dynamic> list;
-      if (body is List) {
-        list = body;
-      } else if (body is Map) {
-        list = (body['items'] ?? body['data'] ?? body['customers'] ?? []) as List<dynamic>;
-      } else {
-        list = [];
+      final raw = await _repo.getCustomers(_tenantId!);
+      final all = raw.map((e) => CustomerModel.fromJson(e)).toList();
+      if (mounted) {
+        setState(() {
+          _customers = _search.isEmpty
+              ? all
+              : all.where((c) =>
+                  c.fullName.toLowerCase().contains(_search.toLowerCase()) ||
+                  (c.mobileNumber?.contains(_search) ?? false)).toList();
+          _loading = false;
+        });
       }
-      setState(() {
-        _customers = list.map((e) => CustomerModel.fromJson(e as Map<String, dynamic>)).toList();
-        _loading = false;
-      });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Customers'),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: () => _load())],
-      ),
+      backgroundColor: QDPalette.surfaceBackground,
+      appBar: AppBar(title: const Text('Customers')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          Container(
+            color: QDPalette.surfaceCard,
+            padding: const EdgeInsets.fromLTRB(
+                QDSpace.screenPad, 8, QDSpace.screenPad, 12),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'Search customers...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear_rounded, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
+                          setState(() => _search = '');
                           _load();
                         },
                       )
                     : null,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              onChanged: (v) => _load(search: v),
+              onChanged: (v) {
+                setState(() => _search = v);
+                _load();
+              },
+              textInputAction: TextInputAction.search,
             ),
           ),
+          Container(height: 1, color: QDPalette.neutral100),
           Expanded(
             child: _loading
                 ? const QDLoading()
                 : _error != null
-                    ? QDError(message: _error!, onRetry: () => _load())
+                    ? QDError(message: _error!, onRetry: _load)
                     : _customers.isEmpty
-                        ? const QDEmptyState(title: 'No Customers', subtitle: 'No customers found.')
+                        ? const QDEmptyState(
+                            title: 'No Customers',
+                            subtitle: 'No customers found.',
+                            icon: Icons.people_outline_rounded,
+                          )
                         : RefreshIndicator(
-                            onRefresh: () => _load(),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            onRefresh: _load,
+                            color: QDPalette.primary500,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(QDSpace.screenPad),
                               itemCount: _customers.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
                               itemBuilder: (_, i) => _CustomerCard(customer: _customers[i]),
                             ),
                           ),
@@ -129,46 +133,57 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: QDColors.primaryLight,
-              child: Text(customer.initials,
-                  style: const TextStyle(color: QDColors.primary, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(customer.fullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  if (customer.mobileNumber != null)
-                    Text(customer.mobileNumber!,
-                        style: const TextStyle(fontSize: 13, color: QDColors.textSecondary)),
-                  if (customer.email != null)
-                    Text(customer.email!,
-                        style: const TextStyle(fontSize: 12, color: QDColors.textHint)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+    return Container(
+      margin: const EdgeInsets.only(bottom: QDSpace.cardGap),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
+      decoration: BoxDecoration(
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
+      ),
+      child: Row(
+        children: [
+          QDAvatar(name: customer.fullName, size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (customer.totalVisits != null)
-                  Text('${customer.totalVisits} visits',
-                      style: const TextStyle(fontSize: 12, color: QDColors.textSecondary)),
-                if (customer.totalSpent != null)
-                  Text(QDCurrency.format(customer.totalSpent!),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: QDColors.success)),
+                Text(customer.fullName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: QDPalette.neutral800)),
+                if (customer.mobileNumber != null)
+                  Text(customer.mobileNumber!,
+                      style: const TextStyle(
+                          color: QDPalette.neutral500, fontSize: 13)),
+                if (customer.email != null)
+                  Text(customer.email!,
+                      style: const TextStyle(
+                          color: QDPalette.neutral400, fontSize: 12)),
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (customer.totalVisits != null)
+                Text('${customer.totalVisits} visits',
+                    style: const TextStyle(
+                        color: QDPalette.primary600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              if (customer.totalSpent != null)
+                Text(QDCurrency.format(customer.totalSpent!),
+                    style: const TextStyle(
+                        color: QDPalette.success500,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
       ),
     );
   }

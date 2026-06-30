@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/design_system/design_system.dart';
-import '../../../../app/themes.dart';
 import '../../../../core/models/business_model.dart';
 import '../../../../core/widgets/qd_empty_state.dart';
 import '../../../../core/widgets/qd_error.dart';
@@ -19,9 +19,14 @@ class BusinessesListScreen extends StatefulWidget {
 class _BusinessesListScreenState extends State<BusinessesListScreen> {
   final _repo = PlatformRepository();
   final _searchCtrl = TextEditingController();
+  Timer? _debounce;
+  List<BusinessModel> _allItems = [];
   List<BusinessModel> _items = [];
   bool _isLoading = true;
   String? _error;
+  String? _statusFilter;
+
+  static const _statusOptions = ['ACTIVE', 'TRIAL', 'SUSPENDED', 'EXPIRED', 'PENDING'];
 
   @override
   void initState() {
@@ -31,15 +36,45 @@ class _BusinessesListScreenState extends State<BusinessesListScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String v) {
+    setState(() {});
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _load(search: v.trim().isEmpty ? null : v.trim());
+    });
+  }
+
+  void _applyStatusFilter(String? status) {
+    setState(() {
+      _statusFilter = status;
+      if (status == null) {
+        _items = _allItems;
+      } else {
+        _items = _allItems
+            .where((b) => b.subscriptionStatus?.toUpperCase() == status)
+            .toList();
+      }
+    });
   }
 
   Future<void> _load({String? search}) async {
     setState(() { _isLoading = true; _error = null; });
     try {
       final items = await _repo.getBusinesses(search: search);
-      if (mounted) setState(() { _items = items; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allItems = items;
+          _items = _statusFilter == null
+              ? items
+              : items.where((b) => b.subscriptionStatus?.toUpperCase() == _statusFilter).toList();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
     }
@@ -59,13 +94,36 @@ class _BusinessesListScreenState extends State<BusinessesListScreen> {
             _Header(count: _items.length, isLoading: _isLoading),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                QDSpace.screenPad, 0, QDSpace.screenPad, QDSpace.x3),
+                QDSpace.screenPad, 0, QDSpace.screenPad, QDSpace.x2),
               child: QDSearchBar(
                 controller: _searchCtrl,
                 placeholder: 'Search businesses...',
                 onSubmitted: (v) => _load(search: v.trim()),
-                onChanged: (v) { if (v.isEmpty) _load(); },
-                onClear: _load,
+                onChanged: _onSearchChanged,
+                onClear: () {
+                  _searchCtrl.clear();
+                  _load();
+                },
+              ),
+            ),
+            // Status filter chips
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 4, QDSpace.screenPad, 8),
+                children: [
+                  _FilterChip(
+                    label: 'All',
+                    selected: _statusFilter == null,
+                    onTap: () => _applyStatusFilter(null),
+                  ),
+                  ..._statusOptions.map((s) => _FilterChip(
+                    label: s,
+                    selected: _statusFilter == s,
+                    onTap: () => _applyStatusFilter(_statusFilter == s ? null : s),
+                  )),
+                ],
               ),
             ),
             Expanded(
@@ -152,6 +210,41 @@ class _Header extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Status Filter Chip ─────────────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? QDPalette.primary600 : QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.full),
+          border: Border.all(
+            color: selected ? QDPalette.primary600 : QDPalette.neutral200,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : QDPalette.neutral500,
+          ),
+        ),
       ),
     );
   }

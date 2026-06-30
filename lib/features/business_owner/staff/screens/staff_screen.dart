@@ -45,6 +45,37 @@ class _StaffScreenState extends State<StaffScreen> {
     }
   }
 
+  Future<void> _confirmDelete(StaffMemberModel s) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove Staff'),
+        content: Text('Remove ${s.fullName} from this business?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: QDPalette.error500),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || _tenantId == null) return;
+    try {
+      await _repo.removeStaff(_tenantId!, s.personTenantRoleId);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
   void _showAddSheet() {
     showModalBottomSheet(
       context: context,
@@ -158,6 +189,27 @@ class _StaffScreenState extends State<StaffScreen> {
                                         color: color,
                                         fontWeight: FontWeight.w600),
                                   ),
+                                ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert_rounded,
+                                      color: QDPalette.neutral400, size: 20),
+                                  onSelected: (v) {
+                                    if (v == 'delete') _confirmDelete(s);
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(children: [
+                                        Icon(Icons.person_remove_outlined,
+                                            size: 16,
+                                            color: QDPalette.error500),
+                                        SizedBox(width: 8),
+                                        Text('Remove',
+                                            style: TextStyle(
+                                                color: QDPalette.error500)),
+                                      ]),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

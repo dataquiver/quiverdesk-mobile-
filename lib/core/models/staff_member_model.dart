@@ -1,5 +1,6 @@
 class StaffMemberModel {
   final int personId;
+  final int personTenantRoleId;
   final String fullName;
   final String roleCode;
   final String roleName;
@@ -9,6 +10,7 @@ class StaffMemberModel {
 
   const StaffMemberModel({
     required this.personId,
+    required this.personTenantRoleId,
     required this.fullName,
     required this.roleCode,
     required this.roleName,
@@ -26,6 +28,7 @@ class StaffMemberModel {
   factory StaffMemberModel.fromJson(Map<String, dynamic> json) {
     return StaffMemberModel(
       personId: json['personId'] as int,
+      personTenantRoleId: json['personTenantRoleId'] as int? ?? 0,
       fullName: json['fullName'] as String? ?? '',
       roleCode: json['roleCode'] as String? ?? '',
       roleName: json['roleName'] as String? ?? '',

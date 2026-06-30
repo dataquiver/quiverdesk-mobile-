@@ -32,6 +32,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     await _load();
   }
 
+  Future<void> _showAddSheet() async {
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddInventorySheet(tenantId: _tenantId!),
+    );
+    if (created == true) _load();
+  }
+
   Future<void> _load() async {
     if (_tenantId == null) return;
     setState(() { _loading = true; _error = null; });
@@ -47,6 +57,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: QDPalette.surfaceBackground,
+      floatingActionButton: _tenantId != null
+          ? FloatingActionButton(
+              onPressed: _showAddSheet,
+              backgroundColor: QDPalette.primary600,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       appBar: AppBar(title: const Text('Inventory')),
       body: _loading
           ? const QDLoading()
@@ -69,6 +87,154 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         itemBuilder: (_, i) => _ItemCard(item: _items![i]),
                       ),
                     ),
+    );
+  }
+}
+
+// ── Add Inventory Sheet ────────────────────────────────────────────────────────
+
+class _AddInventorySheet extends StatefulWidget {
+  final int tenantId;
+  const _AddInventorySheet({required this.tenantId});
+
+  @override
+  State<_AddInventorySheet> createState() => _AddInventorySheetState();
+}
+
+class _AddInventorySheetState extends State<_AddInventorySheet> {
+  final _repo = BusinessRepository();
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _unitCtrl = TextEditingController();
+  final _qtyCtrl = TextEditingController(text: '0');
+  final _reorderCtrl = TextEditingController(text: '5');
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _unitCtrl.dispose();
+    _qtyCtrl.dispose();
+    _reorderCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _saving = true);
+    try {
+      await _repo.createInventoryItem(widget.tenantId, {
+        'itemName': _nameCtrl.text.trim(),
+        'unit': _unitCtrl.text.trim(),
+        'quantity': int.tryParse(_qtyCtrl.text) ?? 0,
+        'reorderLevel': int.tryParse(_reorderCtrl.text) ?? 5,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(QDRadius.sheet)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 20, QDSpace.screenPad, QDSpace.screenPad),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: QDPalette.neutral200, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const Text('Add Inventory Item',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: QDPalette.neutral900)),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _nameCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Item Name *',
+                      prefixIcon: Icon(Icons.inventory_2_outlined),
+                    ),
+                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: QDSpace.x3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _unitCtrl,
+                          decoration: const InputDecoration(labelText: 'Unit (e.g. ml, pcs)'),
+                        ),
+                      ),
+                      const SizedBox(width: QDSpace.x3),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _qtyCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Quantity'),
+                          validator: (v) => int.tryParse(v ?? '') == null ? 'Enter number' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: QDSpace.x3),
+                  TextFormField(
+                    controller: _reorderCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Reorder Level',
+                      helperText: 'Alert when stock falls to this level',
+                    ),
+                    validator: (v) => int.tryParse(v ?? '') == null ? 'Enter number' : null,
+                  ),
+                  const SizedBox(height: QDSpace.x5),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.add_rounded),
+                      label: Text(_saving ? 'Saving...' : 'Add Item'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: QDPalette.primary600,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(QDRadius.sm)),
+                        elevation: 0,
+                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

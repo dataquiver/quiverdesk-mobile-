@@ -12,8 +12,13 @@ class ApiEndpoints {
   static String customers(int tenantId) => '/api/business/$tenantId/customers';
   static String customerDetail(int tenantId, int id) => '/api/business/$tenantId/customers/$id';
   static String services(int tenantId) => '/api/business/$tenantId/services';
+  static String serviceDetail(int tenantId, int id) => '/api/business/$tenantId/services/$id';
   static String staff(int tenantId) => '/api/business/$tenantId/staff';
+  static String staffDetail(int tenantId, int id) => '/api/business/$tenantId/staff/$id';
   static String invoices(int tenantId) => '/api/business/$tenantId/invoices';
+  static String invoiceDetail(int tenantId, int id) => '/api/business/$tenantId/invoices/$id';
+  static String invoicePayment(int tenantId, int id) => '/api/business/$tenantId/invoices/$id/pay';
+  static String appointmentFeedback(int tenantId, int id) => '/api/business/$tenantId/appointments/$id/feedback';
   static String reports(int tenantId) => '/api/business/$tenantId/reports';
   static String subscription(int tenantId) => '/api/business/$tenantId/subscription';
 

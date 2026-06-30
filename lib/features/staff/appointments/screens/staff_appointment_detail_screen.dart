@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/appointment_model.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -13,10 +13,12 @@ class StaffAppointmentDetailScreen extends StatefulWidget {
   const StaffAppointmentDetailScreen({super.key, required this.appointmentId});
 
   @override
-  State<StaffAppointmentDetailScreen> createState() => _StaffAppointmentDetailScreenState();
+  State<StaffAppointmentDetailScreen> createState() =>
+      _StaffAppointmentDetailScreenState();
 }
 
-class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScreen> {
+class _StaffAppointmentDetailScreenState
+    extends State<StaffAppointmentDetailScreen> {
   final _repo = StaffRepository();
   AppointmentModel? _data;
   bool _isLoading = true;
@@ -25,17 +27,18 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
   int? _tenantId;
 
   static const _transitions = <String, List<String>>{
-    'SCHEDULED': ['CONFIRMED'],
-    'CONFIRMED': ['IN_PROGRESS'],
-    'IN_PROGRESS': ['COMPLETED'],
-    'COMPLETED': [],
-    'CANCELLED': [],
+    'BOOKED':     ['CONFIRMED'],
+    'SCHEDULED':  ['CONFIRMED'],
+    'CONFIRMED':  ['IN_PROGRESS'],
+    'IN_PROGRESS':['COMPLETED'],
+    'COMPLETED':  [],
+    'CANCELLED':  [],
   };
 
   static const _actionLabels = <String, String>{
-    'CONFIRMED': 'Confirm Appointment',
+    'CONFIRMED':   'Confirm Appointment',
     'IN_PROGRESS': 'Start Service',
-    'COMPLETED': 'Mark as Completed',
+    'COMPLETED':   'Mark as Completed',
   };
 
   @override
@@ -66,23 +69,103 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
     setState(() => _updating = true);
     try {
       await _repo.updateAppointmentStatus(_tenantId!, widget.appointmentId, newStatus);
-      if (mounted) setState(() { _data = _data!.copyWith(status: newStatus); _updating = false; });
       if (mounted) {
+        setState(() {
+          _data = _data!.copyWith(status: newStatus);
+          _updating = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Status updated to $newStatus'),
-          backgroundColor: QDColors.success,
+          content: Text('Status updated to ${newStatus.replaceAll('_', ' ')}'),
+          backgroundColor: QDPalette.success500,
           behavior: SnackBarBehavior.floating,
         ));
+        if (newStatus == 'COMPLETED') _showRatingDialog();
       }
     } catch (e) {
-      if (mounted) setState(() => _updating = false);
       if (mounted) {
+        setState(() => _updating = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Failed: $e'),
-          backgroundColor: QDColors.error,
+          backgroundColor: QDPalette.error500,
         ));
       }
     }
+  }
+
+  Future<void> _showRatingDialog() async {
+    if (_tenantId == null || _data == null) return;
+    int rating = 5;
+    final commentCtrl = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
+          title: const Text('Customer Rating'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('How did it go? Record the customer\'s feedback.',
+                  style: TextStyle(color: QDPalette.neutral500, fontSize: 13)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setInner(() => rating = i + 1),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: QDPalette.warning500,
+                      size: 36,
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: 'Optional comment...',
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Skip'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                if (_tenantId == null) return;
+                try {
+                  await _repo.submitFeedback(_tenantId!, widget.appointmentId, {
+                    'rating': rating,
+                    if (commentCtrl.text.trim().isNotEmpty) 'comment': commentCtrl.text.trim(),
+                  });
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Feedback saved'),
+                          backgroundColor: QDPalette.success500),
+                    );
+                  }
+                } catch (_) {}
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: QDPalette.primary600,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+              child: const Text('Save Rating'),
+            ),
+          ],
+        ),
+      ),
+    );
+    commentCtrl.dispose();
   }
 
   void _call(String phone) async {
@@ -90,27 +173,21 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
     if (await canLaunchUrl(uri)) launchUrl(uri);
   }
 
-  Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'SCHEDULED' => QDColors.scheduled,
-    'CONFIRMED' => QDColors.confirmed,
-    'IN_PROGRESS' => QDColors.inProgress,
-    'COMPLETED' => QDColors.completed,
-    'CANCELLED' => QDColors.cancelled,
-    _ => QDColors.textHint,
-  };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Appointment Details'),
         actions: [
           if (_updating)
             const Padding(
               padding: EdgeInsets.all(14),
-              child: SizedBox(width: 20, height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: QDPalette.primary500),
+              ),
             ),
         ],
       ),
@@ -124,63 +201,110 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
 
   Widget _buildContent() {
     final a = _data!;
-    final sc = _statusColor(a.status);
+    final statusColor = QDStatusChip.colorFor(a.status);
     final nextStatuses = _transitions[a.status] ?? [];
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.screenPad),
       children: [
         // Status banner
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: sc.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: sc.withValues(alpha: 0.3)),
+            color: statusColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(QDRadius.card),
+            border: Border.all(color: statusColor.withValues(alpha: 0.25)),
           ),
           child: Row(
             children: [
-              Icon(Icons.circle, color: sc, size: 10),
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 8),
-              Text(a.status.replaceAll('_', ' '),
-                  style: TextStyle(color: sc, fontWeight: FontWeight.w700, fontSize: 15)),
+              Text(
+                a.status.replaceAll('_', ' '),
+                style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14),
+              ),
               const Spacer(),
-              Text(QDDateUtils.relativeTime(a.appointmentDate, a.startTime),
-                  style: const TextStyle(color: QDColors.textSecondary, fontSize: 12)),
+              Text(
+                QDDateUtils.relativeTime(a.appointmentDate, a.startTime),
+                style: const TextStyle(
+                    color: QDPalette.neutral400, fontSize: 12),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: QDSpace.cardGap),
 
-        // Customer card
+        // Customer
         _section('Customer', [
-          _row(Icons.person_outline, 'Name', a.customerName),
-          if (a.customerPhone != null) _phoneRow(a.customerPhone!),
+          _row(Icons.person_outline_rounded, 'Name', a.customerName),
+          if (a.customerPhone != null) ...[
+            _divider(),
+            _rowWithCall('Phone', a.customerPhone!),
+          ],
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: QDSpace.cardGap),
 
-        // Service card
+        // Service details
         _section('Service Details', [
           _row(Icons.spa_outlined, 'Service', a.serviceName),
-          _row(Icons.calendar_today_outlined, 'Date', QDDateUtils.formatDate(a.appointmentDate)),
-          _row(Icons.access_time_outlined, 'Time', QDDateUtils.formatTime(a.startTime)),
-          if (a.durationMinutes != null)
-            _row(Icons.timer_outlined, 'Duration', '${a.durationMinutes} min'),
+          _divider(),
+          _row(Icons.calendar_today_outlined, 'Date',
+              QDDateUtils.formatDate(a.appointmentDate)),
+          _divider(),
+          _row(Icons.access_time_outlined, 'Time',
+              QDDateUtils.formatTime(a.startTime)),
+          if (a.durationMinutes != null) ...[
+            _divider(),
+            _row(Icons.timer_outlined, 'Duration',
+                '${a.durationMinutes} min'),
+          ],
         ]),
 
         if (a.notes != null && a.notes!.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: QDSpace.cardGap),
           _section('Notes', [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Text(a.notes!, style: const TextStyle(color: QDColors.textSecondary, fontSize: 14)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: QDSpace.screenPad, vertical: 10),
+              child: Text(a.notes!,
+                  style: const TextStyle(
+                      color: QDPalette.neutral500, fontSize: 14, height: 1.5)),
+            ),
+          ]),
+        ],
+
+        if (a.rating != null) ...[
+          const SizedBox(height: QDSpace.cardGap),
+          _section('Rating', [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: QDSpace.screenPad, vertical: 10),
+              child: Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < a.rating!
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: QDPalette.warning500,
+                    size: 24,
+                  ),
+                ),
+              ),
             ),
           ]),
         ],
 
         // Action buttons
         if (nextStatuses.isNotEmpty) ...[
-          const SizedBox(height: 24),
+          const SizedBox(height: QDSpace.sectionGap),
           ...nextStatuses.map((s) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: ElevatedButton.icon(
@@ -188,17 +312,36 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
               icon: Icon(_icon(s), size: 20),
               label: Text(_actionLabels[s] ?? s),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _statusColor(s),
+                backgroundColor: QDStatusChip.colorFor(s),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 52),
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(QDRadius.sm)),
+                textStyle: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           )),
         ],
-        const SizedBox(height: 24),
+
+        if (a.status == 'COMPLETED') ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _showRatingDialog,
+            icon: const Icon(Icons.star_outline_rounded),
+            label: const Text('Add Customer Rating'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: QDPalette.warning500,
+              side: const BorderSide(color: QDPalette.warning500),
+              minimumSize: const Size(double.infinity, 46),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(QDRadius.sm)),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: QDSpace.x6),
       ],
     );
   }
@@ -213,66 +356,87 @@ class _StaffAppointmentDetailScreenState extends State<StaffAppointmentDetailScr
   Widget _section(String title, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+                QDSpace.screenPad, 12, QDSpace.screenPad, 8),
             child: Text(title,
-                style: const TextStyle(fontWeight: FontWeight.w700, color: QDColors.textSecondary, fontSize: 12)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: QDPalette.neutral400,
+                    fontSize: 11,
+                    letterSpacing: 0.5)),
           ),
-          const Divider(height: 1),
+          Container(height: 1, color: QDPalette.neutral100),
           ...children,
         ],
       ),
     );
   }
 
+  Widget _divider() => Container(
+      margin: const EdgeInsets.symmetric(horizontal: QDSpace.screenPad),
+      height: 1,
+      color: QDPalette.neutral50);
+
   Widget _row(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+          horizontal: QDSpace.screenPad, vertical: 12),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: QDColors.textHint),
+          Icon(icon, size: 18, color: QDPalette.neutral300),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+          Text(label,
+              style: const TextStyle(color: QDPalette.neutral400, fontSize: 13)),
           const Spacer(),
-          Text(value,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: QDColors.textPrimary)),
+          Flexible(
+            child: Text(value,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: QDPalette.neutral800)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _phoneRow(String phone) {
+  Widget _rowWithCall(String label, String phone) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+          horizontal: QDSpace.screenPad, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.phone_outlined, size: 18, color: QDColors.textHint),
+          const Icon(Icons.phone_outlined, size: 18, color: QDPalette.neutral300),
           const SizedBox(width: 10),
-          const Text('Phone', style: TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+          Text(label,
+              style: const TextStyle(color: QDPalette.neutral400, fontSize: 13)),
           const Spacer(),
+          Text(phone,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: QDPalette.neutral800)),
+          const SizedBox(width: 10),
           GestureDetector(
             onTap: () => _call(phone),
-            child: Row(
-              children: [
-                Text(phone,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: QDColors.primary)),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: QDColors.successLight,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(Icons.call, size: 14, color: QDColors.success),
-                ),
-              ],
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: QDPalette.successBg,
+                borderRadius: BorderRadius.circular(QDRadius.xs),
+              ),
+              child: const Icon(Icons.call_rounded,
+                  size: 16, color: QDPalette.success500),
             ),
           ),
         ],

@@ -27,6 +27,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   int? _tenantId;
 
   static const _validTransitions = <String, List<String>>{
+    'BOOKED':    ['CONFIRMED', 'CANCELLED'],
     'SCHEDULED': ['CONFIRMED', 'CANCELLED'],
     'CONFIRMED': ['IN_PROGRESS', 'CANCELLED'],
     'IN_PROGRESS': ['COMPLETED', 'CANCELLED'],
@@ -94,6 +95,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   }
 
   Color _statusColor(String s) => switch (s.toUpperCase()) {
+    'BOOKED'      => QDPalette.info500,
     'SCHEDULED'   => QDPalette.info500,
     'CONFIRMED'   => QDPalette.success500,
     'IN_PROGRESS' => QDPalette.warning500,
