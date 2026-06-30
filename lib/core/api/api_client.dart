@@ -1,15 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../auth/token_storage.dart';
+import 'api_config.dart';
 import 'api_endpoints.dart';
 
 class ApiClient {
-  static const _devBaseUrl = 'http://10.0.2.2:7080'; // Android emulator → localhost
-  static const _prodBaseUrl = 'https://api.quiverdesk.com';
-
-  // Toggle this for release builds
-  static const _isProduction = false;
-  static String get baseUrl => _isProduction ? _prodBaseUrl : _devBaseUrl;
+  static String get baseUrl => ApiConfig.baseUrl;
 
   static Dio? _instance;
 
@@ -28,7 +24,7 @@ class ApiClient {
 
     dio.interceptors.add(_AuthInterceptor(dio));
 
-    if (!_isProduction) {
+    if (!ApiConfig.isProduction) {
       dio.interceptors.add(PrettyDioLogger(
         requestHeader: false,
         requestBody: true,
