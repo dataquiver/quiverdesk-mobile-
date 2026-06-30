@@ -44,7 +44,8 @@ class CustomerModel extends Equatable {
           ? DateTime.tryParse(json['dateOfBirth'])
           : null,
       totalVisits: json['totalVisits'] as int?,
-      totalSpent: (json['totalSpent'] as num?)?.toDouble(),
+      totalSpent: (json['totalSpent'] as num?)?.toDouble()
+          ?? (json['lifetimeRevenue'] as num?)?.toDouble(),
       lastVisitDate: json['lastVisitDate'] != null
           ? DateTime.tryParse(json['lastVisitDate'])
           : null,

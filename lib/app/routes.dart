@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../core/auth/token_storage.dart';
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
 import '../features/business_owner/dashboard/screens/business_dashboard_screen.dart';
 import '../features/business_owner/appointments/screens/appointments_screen.dart';
 import '../features/business_owner/appointments/screens/appointment_detail_screen.dart';
@@ -10,6 +11,13 @@ import '../features/business_owner/customers/screens/customers_screen.dart';
 import '../features/business_owner/customers/screens/customer_detail_screen.dart';
 import '../features/business_owner/billing/screens/quick_invoice_screen.dart';
 import '../features/business_owner/reports/screens/reports_screen.dart';
+import '../features/business_owner/services/screens/services_screen.dart';
+import '../features/business_owner/staff/screens/staff_screen.dart';
+import '../features/business_owner/inventory/screens/inventory_screen.dart';
+import '../features/business_owner/crm/screens/crm_screen.dart';
+import '../features/business_owner/memberships/screens/memberships_screen.dart';
+import '../features/business_owner/feedback/screens/feedback_screen.dart';
+import '../features/business_owner/subscription/screens/subscription_screen.dart';
 import '../features/staff/dashboard/screens/staff_dashboard_screen.dart';
 import '../features/staff/appointments/screens/staff_appointments_screen.dart';
 import '../features/staff/appointments/screens/staff_appointment_detail_screen.dart';
@@ -20,11 +28,14 @@ import '../features/shared/shells/business_shell.dart';
 import '../features/shared/shells/staff_shell.dart';
 import '../features/shared/shells/platform_shell.dart';
 import '../features/shared/screens/profile_screen.dart';
+import '../features/shared/screens/change_password_screen.dart';
 
 class AppRoutes {
   static const splash = '/';
   static const login = '/login';
+  static const register = '/register';
   static const profile = '/profile';
+  static const changePassword = '/change-password';
 
   // Business Owner (shell tabs)
   static const businessDashboard = '/business/dashboard';
@@ -37,6 +48,13 @@ class AppRoutes {
   static const newAppointment = '/business/appointments/new';
   static const appointmentDetail = '/business/appointments/:id';
   static const customerDetail = '/business/customers/:id';
+  static const businessServices = '/business/services';
+  static const businessStaff = '/business/staff';
+  static const businessInventory = '/business/inventory';
+  static const businessCrm = '/business/crm';
+  static const businessMemberships = '/business/memberships';
+  static const businessFeedback = '/business/feedback';
+  static const businessSubscription = '/business/subscription';
 
   // Staff (shell tabs)
   static const staffDashboard = '/staff/dashboard';
@@ -58,14 +76,18 @@ final appRouter = GoRouter(
   redirect: (context, state) async {
     final isAuth = await TokenStorage.hasValidToken();
     final loc = state.matchedLocation;
-    final isPublic = loc == AppRoutes.login || loc == AppRoutes.splash;
+    final isPublic = loc == AppRoutes.login ||
+        loc == AppRoutes.splash ||
+        loc == AppRoutes.register;
     if (!isAuth && !isPublic) return AppRoutes.login;
     return null;
   },
   routes: [
     GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
     GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
+    GoRoute(path: AppRoutes.register, builder: (_, __) => const RegisterScreen()),
     GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfileScreen()),
+    GoRoute(path: AppRoutes.changePassword, builder: (_, __) => const ChangePasswordScreen()),
 
     // Business Owner shell
     ShellRoute(
@@ -93,6 +115,13 @@ final appRouter = GoRouter(
         customerId: int.parse(state.pathParameters['id']!),
       ),
     ),
+    GoRoute(path: AppRoutes.businessServices, builder: (_, __) => const ServicesScreen()),
+    GoRoute(path: AppRoutes.businessStaff, builder: (_, __) => const StaffScreen()),
+    GoRoute(path: AppRoutes.businessInventory, builder: (_, __) => const InventoryScreen()),
+    GoRoute(path: AppRoutes.businessCrm, builder: (_, __) => const CrmScreen()),
+    GoRoute(path: AppRoutes.businessMemberships, builder: (_, __) => const MembershipsScreen()),
+    GoRoute(path: AppRoutes.businessFeedback, builder: (_, __) => const FeedbackScreen()),
+    GoRoute(path: AppRoutes.businessSubscription, builder: (_, __) => const SubscriptionScreen()),
 
     // Staff shell
     ShellRoute(

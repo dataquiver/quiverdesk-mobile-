@@ -48,7 +48,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.20"
     // Firebase (add back in Step 7 with google-services.json):
     // implementation platform("com.google.firebase:firebase-bom:32.7.0")
     // implementation "com.google.firebase:firebase-messaging"

@@ -20,7 +20,7 @@ class ServiceModel {
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
     return ServiceModel(
       serviceId: json['serviceId'] as int,
-      serviceName: json['serviceName'] as String? ?? '',
+      serviceName: json['serviceName'] as String? ?? json['name'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       durationMinutes: json['durationMinutes'] as int? ?? 30,
       category: json['category'] as String?,

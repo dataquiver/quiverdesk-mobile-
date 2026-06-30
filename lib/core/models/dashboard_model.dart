@@ -21,7 +21,8 @@ class BusinessDashboardModel extends Equatable {
   });
 
   factory BusinessDashboardModel.fromJson(Map<String, dynamic> json) {
-    final upcoming = (json['upcomingAppointments'] as List<dynamic>? ?? [])
+    // API returns 'recentAppointments' as list; 'upcomingAppointments' is an int count
+    final upcoming = (json['recentAppointments'] as List<dynamic>? ?? [])
         .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
         .toList();
     return BusinessDashboardModel(
@@ -29,7 +30,7 @@ class BusinessDashboardModel extends Equatable {
       businessName: json['businessName'] as String? ?? '',
       todayAppointments: json['todayAppointments'] as int? ?? 0,
       todayRevenue: (json['todayRevenue'] as num?)?.toDouble() ?? 0.0,
-      pendingInvoices: json['pendingInvoices'] as int? ?? 0,
+      pendingInvoices: json['openInvoices'] as int? ?? json['pendingInvoices'] as int? ?? 0,
       newCustomersThisMonth: json['newCustomersThisMonth'] as int? ?? 0,
       upcomingAppointments: upcoming,
     );
@@ -57,13 +58,17 @@ class PlatformDashboardModel extends Equatable {
   });
 
   factory PlatformDashboardModel.fromJson(Map<String, dynamic> json) {
+    final bm = json['businessMetrics'] as Map<String, dynamic>? ?? {};
+    final rm = json['revenueMetrics'] as Map<String, dynamic>? ?? {};
+    final sm = json['subscriptionMetrics'] as Map<String, dynamic>? ?? {};
+    final ac = json['alertsCount'] as Map<String, dynamic>? ?? {};
     return PlatformDashboardModel(
-      totalBusinesses: json['totalBusinesses'] as int? ?? 0,
-      activeSubscriptions: json['activeSubscriptions'] as int? ?? 0,
-      mrr: (json['mrr'] as num?)?.toDouble() ?? 0.0,
-      newThisMonth: json['newThisMonth'] as int? ?? 0,
-      trialAccounts: json['trialAccounts'] as int? ?? 0,
-      expiringSoon: json['expiringSoon'] as int? ?? 0,
+      totalBusinesses: bm['totalBusinesses'] as int? ?? json['totalBusinesses'] as int? ?? 0,
+      activeSubscriptions: bm['activeBusinesses'] as int? ?? json['activeSubscriptions'] as int? ?? 0,
+      mrr: (rm['mrr'] as num?)?.toDouble() ?? (json['mrr'] as num?)?.toDouble() ?? 0.0,
+      newThisMonth: sm['newSubscriptionsThisMonth'] as int? ?? json['newThisMonth'] as int? ?? 0,
+      trialAccounts: bm['trialBusinesses'] as int? ?? json['trialAccounts'] as int? ?? 0,
+      expiringSoon: ac['subscriptionExpiringSoon'] as int? ?? json['expiringSoon'] as int? ?? 0,
     );
   }
 
@@ -93,7 +98,7 @@ class StaffDashboardModel extends Equatable {
         .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
         .toList();
     final next = json['nextAppointment'] != null
-        ? AppointmentModel.fromJson(json['nextAppointment'])
+        ? AppointmentModel.fromJson(json['nextAppointment'] as Map<String, dynamic>)
         : null;
     return StaffDashboardModel(
       staffName: json['staffName'] as String? ?? '',

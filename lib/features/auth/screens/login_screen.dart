@@ -170,7 +170,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 60),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? ",
+                        style: TextStyle(color: QDColors.textSecondary, fontSize: 14)),
+                    GestureDetector(
+                      onTap: () => context.push(AppRoutes.register),
+                      child: const Text('Register Business',
+                          style: TextStyle(
+                            color: QDColors.primary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
                 if (_appVersion.isNotEmpty)
                   Text(
                     _appVersion,

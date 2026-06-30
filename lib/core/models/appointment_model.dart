@@ -32,17 +32,24 @@ class AppointmentModel extends Equatable {
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
+    // Extract first service name from services array (API field) or fall back to serviceName
+    final services = json['services'] as List<dynamic>?;
+    final firstService = services?.isNotEmpty == true ? services!.first as Map<String, dynamic>? : null;
+    final svcName = json['serviceName'] as String?
+        ?? firstService?['serviceName'] as String?
+        ?? '';
     return AppointmentModel(
       appointmentId: json['appointmentId'] as int,
       customerName: json['customerName'] as String? ?? '',
-      customerPhone: json['customerPhone'] as String?,
-      serviceName: json['serviceName'] as String? ?? '',
-      staffName: json['staffName'] as String? ?? '',
+      customerPhone: json['customerPhone'] as String? ?? json['customerMobile'] as String?,
+      serviceName: svcName,
+      staffName: json['staffName'] as String? ?? json['assignedToName'] as String? ?? '',
       appointmentDate: DateTime.tryParse(json['appointmentDate'] ?? '') ?? DateTime.now(),
       startTime: json['startTime'] as String? ?? '',
       endTime: json['endTime'] as String?,
       status: json['status'] as String? ?? 'SCHEDULED',
-      servicePrice: (json['servicePrice'] as num?)?.toDouble(),
+      servicePrice: (json['servicePrice'] as num?)?.toDouble()
+          ?? (json['totalAmount'] as num?)?.toDouble(),
       durationMinutes: json['durationMinutes'] as int?,
       notes: json['notes'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),

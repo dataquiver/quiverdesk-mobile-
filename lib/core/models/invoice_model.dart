@@ -23,7 +23,7 @@ class InvoiceModel {
 
   double get balance => totalAmount - paidAmount;
   bool get isPaid => status == 'PAID';
-  bool get isUnpaid => status == 'UNPAID';
+  bool get isUnpaid => status == 'UNPAID' || status == 'ISSUED';
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
     final itemList = (json['items'] as List<dynamic>? ?? [])

@@ -13,7 +13,7 @@ class BusinessRepository {
 
   Future<BusinessDashboardModel> getDashboard(int tenantId) async {
     final res = await _dio.get(ApiEndpoints.dashboard(tenantId));
-    return BusinessDashboardModel.fromJson(_data(res));
+    return BusinessDashboardModel.fromJson(_mapData(res));
   }
 
   Future<List<AppointmentModel>> getAppointments(
@@ -31,23 +31,23 @@ class BusinessRepository {
         'pageSize': 50,
       },
     );
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
+    final body = _anyData(res);
+    final list = _toList(body);
     return list.map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<AppointmentModel> getAppointmentDetail(int tenantId, int id) async {
     final res = await _dio.get(ApiEndpoints.appointmentDetail(tenantId, id));
-    return AppointmentModel.fromJson(_data(res));
+    return AppointmentModel.fromJson(_mapData(res));
   }
 
   Future<AppointmentModel> createAppointment(int tenantId, Map<String, dynamic> data) async {
     final res = await _dio.post(ApiEndpoints.appointments(tenantId), data: data);
-    return AppointmentModel.fromJson(_data(res));
+    return AppointmentModel.fromJson(_mapData(res));
   }
 
   Future<void> updateAppointmentStatus(int tenantId, int id, String status) async {
-    await _dio.patch(
+    await _dio.put(
       '${ApiEndpoints.appointmentDetail(tenantId, id)}/status',
       data: {'status': status},
     );
@@ -61,23 +61,21 @@ class BusinessRepository {
         'pageSize': 100,
       },
     );
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
-    return list.map((e) => CustomerModel.fromJson(e as Map<String, dynamic>)).toList();
+    final body = _anyData(res);
+    return _toList(body).map((e) => CustomerModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<CustomerModel> getCustomerDetail(int tenantId, int id) async {
     final res = await _dio.get(ApiEndpoints.customerDetail(tenantId, id));
-    return CustomerModel.fromJson(_data(res));
+    return CustomerModel.fromJson(_mapData(res));
   }
 
   Future<List<AppointmentModel>> getCustomerAppointments(int tenantId, int customerId) async {
     final res = await _dio.get(
       '${ApiEndpoints.customerDetail(tenantId, customerId)}/appointments',
     );
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
-    return list.map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>)).toList();
+    final body = _anyData(res);
+    return _toList(body).map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<InvoiceModel>> getInvoices(int tenantId, {String? status}) async {
@@ -88,23 +86,69 @@ class BusinessRepository {
         'pageSize': 50,
       },
     );
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
-    return list.map((e) => InvoiceModel.fromJson(e as Map<String, dynamic>)).toList();
+    final body = _anyData(res);
+    return _toList(body).map((e) => InvoiceModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<ServiceModel>> getServices(int tenantId) async {
     final res = await _dio.get(ApiEndpoints.services(tenantId));
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
-    return list.map((e) => ServiceModel.fromJson(e as Map<String, dynamic>)).toList();
+    final body = _anyData(res);
+    return _toList(body).map((e) => ServiceModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<ServiceModel> createService(int tenantId, Map<String, dynamic> data) async {
+    final res = await _dio.post(ApiEndpoints.services(tenantId), data: data);
+    return ServiceModel.fromJson(_mapData(res));
   }
 
   Future<List<StaffMemberModel>> getStaff(int tenantId) async {
     final res = await _dio.get(ApiEndpoints.staff(tenantId));
-    final body = _data(res);
-    final list = (body['items'] as List<dynamic>? ?? body as List<dynamic>? ?? []);
-    return list.map((e) => StaffMemberModel.fromJson(e as Map<String, dynamic>)).toList();
+    final body = _anyData(res);
+    return _toList(body).map((e) => StaffMemberModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<StaffMemberModel> addStaff(int tenantId, Map<String, dynamic> data) async {
+    final res = await _dio.post(ApiEndpoints.staff(tenantId), data: data);
+    return StaffMemberModel.fromJson(_mapData(res));
+  }
+
+  Future<List<Map<String, dynamic>>> getInventory(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.inventory(tenantId));
+    final body = _anyData(res);
+    return _toList(body).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> getMemberships(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.memberships(tenantId));
+    final body = _anyData(res);
+    return _toList(body).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> getFeedback(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.feedback(tenantId));
+    final body = _anyData(res);
+    return _toList(body).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> getCrmFollowUps(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.crmFollowUps(tenantId));
+    final body = _anyData(res);
+    return _toList(body).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> getCrmCampaigns(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.crmCampaigns(tenantId));
+    final body = _anyData(res);
+    return _toList(body).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>?> getSubscription(int tenantId) async {
+    try {
+      final res = await _dio.get(ApiEndpoints.subscription(tenantId));
+      return _mapData(res);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>> getReports(int tenantId, {String period = 'THIS_MONTH'}) async {
@@ -112,12 +156,36 @@ class BusinessRepository {
       ApiEndpoints.reports(tenantId),
       queryParameters: {'period': period},
     );
-    return _data(res) as Map<String, dynamic>;
+    return _mapData(res);
   }
 
-  dynamic _data(Response res) {
-    final body = res.data as Map<String, dynamic>;
-    if (body['success'] == false) throw body['message'] ?? 'Error';
-    return body['data'] ?? body;
+  // Returns data as Map, unwrapping {data: ...} wrapper if present.
+  Map<String, dynamic> _mapData(Response res) {
+    final body = res.data;
+    if (body is Map<String, dynamic>) {
+      if (body['success'] == false) throw body['message'] ?? 'Error';
+      final inner = body['data'];
+      return (inner is Map<String, dynamic>) ? inner : body;
+    }
+    return {};
+  }
+
+  // Returns the raw response data (could be Map or List).
+  dynamic _anyData(Response res) {
+    final body = res.data;
+    if (body is Map<String, dynamic> && body['success'] == false) {
+      throw body['message'] ?? 'Error';
+    }
+    if (body is Map<String, dynamic>) {
+      return body['data'] ?? body;
+    }
+    return body;
+  }
+
+  // Converts any response shape to a List.
+  List<dynamic> _toList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) return (data['items'] ?? data['data'] ?? []) as List<dynamic>;
+    return [];
   }
 }

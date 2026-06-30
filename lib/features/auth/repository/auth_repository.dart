@@ -14,30 +14,42 @@ class AuthRepository {
     );
 
     final body = response.data as Map<String, dynamic>;
-    if (body['success'] != true) {
+
+    // API returns { accessToken, expiresIn, person, contexts }
+    final token = body['accessToken'] as String?;
+    if (token == null || token.isEmpty) {
       throw body['message'] ?? 'Login failed';
     }
 
-    final data = body['data'] as Map<String, dynamic>;
-    final token = data['token'] as String;
-    final contexts = (data['contexts'] as List<dynamic>? ?? [])
+    final person = body['person'] as Map<String, dynamic>? ?? {};
+    final contexts = (body['contexts'] as List<dynamic>? ?? [])
         .map((e) => AuthContext.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    // Decode JWT to get claims
-    final claims = _decodeJwt(token);
     final primaryContext = contexts.isNotEmpty ? contexts.first : null;
+
+    final name = person['fullName'] as String? ?? '';
+    final email = person['email'] as String? ?? '';
+    final userId = (person['personId'] ?? '').toString();
+    final roleCode = primaryContext?.roleCode ?? '';
+    final businessId = primaryContext?.tenantId;
 
     await TokenStorage.saveTokens(accessToken: token);
     await TokenStorage.saveUserInfo(
-      role: primaryContext?.roleCode ?? '',
-      name: claims['Name'] ?? '',
-      userId: (claims['personId'] ?? '').toString(),
-      businessId: primaryContext?.tenantId.toString(),
-      email: claims['Email'] ?? '',
+      role: roleCode,
+      name: name,
+      userId: userId,
+      businessId: businessId?.toString(),
+      email: email,
     );
 
-    return UserModel.fromJwt(claims, businessId: primaryContext?.tenantId);
+    return UserModel(
+      userId: userId,
+      name: name,
+      email: email,
+      role: roleCode,
+      businessId: businessId,
+    );
   }
 
   Future<void> logout() async {
@@ -54,8 +66,18 @@ class AuthRepository {
     final claims = _decodeJwt(token);
     final businessIdStr = await TokenStorage.getBusinessId();
     final businessId = businessIdStr != null ? int.tryParse(businessIdStr) : null;
+    final savedRole = await TokenStorage.getUserRole();
 
-    return UserModel.fromJwt(claims, businessId: businessId);
+    final fromJwt = UserModel.fromJwt(claims, businessId: businessId);
+    // JWT may not include role — fall back to the role saved at login time
+    final role = fromJwt.role.isNotEmpty ? fromJwt.role : (savedRole ?? '');
+    return UserModel(
+      userId: fromJwt.userId,
+      name: fromJwt.name,
+      email: fromJwt.email,
+      role: role,
+      businessId: businessId,
+    );
   }
 
   Map<String, dynamic> _decodeJwt(String token) {

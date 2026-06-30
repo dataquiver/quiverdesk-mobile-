@@ -132,9 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _tile(
             icon: Icons.lock_outline,
             title: 'Change Password',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Coming soon')),
-            ),
+            onTap: () => context.push(AppRoutes.changePassword),
           ),
           const SizedBox(height: 8),
           _tile(
@@ -179,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icon(icon, color: c, size: 22),
               const SizedBox(width: 12),
               Expanded(child: Text(title, style: TextStyle(color: c, fontSize: 15, fontWeight: FontWeight.w500))),
-              Icon(Icons.chevron_right, color: QDColors.textHint, size: 20),
+              const Icon(Icons.chevron_right, color: QDColors.textHint, size: 20),
             ],
           ),
         ),
