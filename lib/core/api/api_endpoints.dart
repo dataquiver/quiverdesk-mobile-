@@ -26,6 +26,49 @@ class ApiEndpoints {
   static const platformDashboard = '/api/platform/dashboard';
   static const platformBusinesses = '/api/platform/tenants/businesses';
   static String platformBusinessDetail(int id) => '/api/platform/tenants/businesses/$id';
+  static String platformSuspendBusiness(int id) => '/api/platform/businesses/$id/suspend';
+  static String platformActivateBusiness(int id) => '/api/platform/businesses/$id/activate';
+  static String platformChangePlan(int id) => '/api/platform/businesses/$id/change-plan';
+
+  // PLATFORM ADMIN — Plans
+  static const platformPlans = '/api/platform/plans';
+  static String platformPlanDetail(int id) => '/api/platform/plans/$id';
+  static String platformPlanActivate(int id) => '/api/platform/plans/$id/activate';
+  static String platformPlanDeactivate(int id) => '/api/platform/plans/$id/deactivate';
+
+  // PLATFORM ADMIN — Features
+  static const platformFeatures = '/api/platform/features';
+  static String platformFeatureActivate(int id) => '/api/platform/features/$id/activate';
+  static String platformFeatureDeactivate(int id) => '/api/platform/features/$id/deactivate';
+  static const platformFeaturesMap = '/api/platform/features/map';
+
+  // PLATFORM ADMIN — Payments
+  static const platformPayments = '/api/platform/payments';
+  static const platformPaymentsStatus = '/api/platform/payments/status';
+
+  // PLATFORM ADMIN — Vouchers
+  static const platformVouchers = '/api/platform/vouchers';
+  static String platformVoucherActivate(int id) => '/api/platform/vouchers/$id/activate';
+  static String platformVoucherDeactivate(int id) => '/api/platform/vouchers/$id/deactivate';
+  static String platformVoucherUsages(int id) => '/api/platform/vouchers/$id/usages';
+
+  // PLATFORM ADMIN — Reports
+  static const platformReportsGrowth = '/api/platform/reports/business-growth';
+  static const platformReportsRevenue = '/api/platform/reports/revenue';
+  static const platformReportsPlanRevenue = '/api/platform/reports/plan-revenue';
+  static const platformReportsExpiringTrials = '/api/platform/reports/expiring-trials';
+  static const platformReportsRenewals = '/api/platform/reports/upcoming-renewals';
+
+  // PLATFORM ADMIN — Notifications
+  static const platformNotifications = '/api/platform/notifications';
+  static const platformNotificationsSummary = '/api/platform/notifications/summary';
+  static String platformNotificationRead(int id) => '/api/platform/notifications/$id/read';
+  static String platformNotificationResolve(int id) => '/api/platform/notifications/$id/resolve';
+  static const platformNotificationsGenerate = '/api/platform/notifications/generate';
+
+  // STAFF — customers and billing
+  static String staffCustomers(int tenantId) => '/api/staff/$tenantId/customers';
+  static String staffInvoices(int tenantId) => '/api/staff/$tenantId/invoices';
 
   // BUSINESS OWNER — additional
   static String inventory(int tenantId) => '/api/business/$tenantId/products';

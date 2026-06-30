@@ -21,9 +21,17 @@ import '../features/business_owner/subscription/screens/subscription_screen.dart
 import '../features/staff/dashboard/screens/staff_dashboard_screen.dart';
 import '../features/staff/appointments/screens/staff_appointments_screen.dart';
 import '../features/staff/appointments/screens/staff_appointment_detail_screen.dart';
+import '../features/staff/customers/screens/staff_customers_screen.dart';
+import '../features/staff/billing/screens/staff_billing_screen.dart';
 import '../features/platform_admin/dashboard/screens/platform_dashboard_screen.dart';
 import '../features/platform_admin/businesses/screens/businesses_list_screen.dart';
 import '../features/platform_admin/businesses/screens/business_detail_screen.dart';
+import '../features/platform_admin/plans/screens/platform_plans_screen.dart';
+import '../features/platform_admin/features_config/screens/platform_features_screen.dart';
+import '../features/platform_admin/payments/screens/platform_payments_screen.dart';
+import '../features/platform_admin/vouchers/screens/platform_vouchers_screen.dart';
+import '../features/platform_admin/reports/screens/platform_reports_screen.dart';
+import '../features/platform_admin/notifications/screens/platform_notifications_screen.dart';
 import '../features/shared/shells/business_shell.dart';
 import '../features/shared/shells/staff_shell.dart';
 import '../features/shared/shells/platform_shell.dart';
@@ -59,6 +67,8 @@ class AppRoutes {
   // Staff (shell tabs)
   static const staffDashboard = '/staff/dashboard';
   static const staffAppointments = '/staff/appointments';
+  static const staffCustomers = '/staff/customers';
+  static const staffBilling = '/staff/billing';
 
   // Staff detail (no shell)
   static const staffAppointmentDetail = '/staff/appointments/:id';
@@ -69,6 +79,14 @@ class AppRoutes {
 
   // Platform Admin detail (no shell)
   static const businessAdminDetail = '/platform/businesses/:id';
+
+  // Platform Admin extra screens (push navigation)
+  static const platformPlans = '/platform/plans';
+  static const platformFeatures = '/platform/features';
+  static const platformPayments = '/platform/payments';
+  static const platformVouchers = '/platform/vouchers';
+  static const platformReports = '/platform/reports';
+  static const platformNotifications = '/platform/notifications';
 }
 
 final appRouter = GoRouter(
@@ -129,6 +147,8 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(path: AppRoutes.staffDashboard, builder: (_, __) => const StaffDashboardScreen()),
         GoRoute(path: AppRoutes.staffAppointments, builder: (_, __) => const StaffAppointmentsScreen()),
+        GoRoute(path: AppRoutes.staffCustomers, builder: (_, __) => const StaffCustomersScreen()),
+        GoRoute(path: AppRoutes.staffBilling, builder: (_, __) => const StaffBillingScreen()),
       ],
     ),
 
@@ -156,5 +176,13 @@ final appRouter = GoRouter(
         businessId: int.parse(state.pathParameters['id']!),
       ),
     ),
+
+    // Platform Admin extra screens (push, no shell)
+    GoRoute(path: AppRoutes.platformPlans, builder: (_, __) => const PlatformPlansScreen()),
+    GoRoute(path: AppRoutes.platformFeatures, builder: (_, __) => const PlatformFeaturesScreen()),
+    GoRoute(path: AppRoutes.platformPayments, builder: (_, __) => const PlatformPaymentsScreen()),
+    GoRoute(path: AppRoutes.platformVouchers, builder: (_, __) => const PlatformVouchersScreen()),
+    GoRoute(path: AppRoutes.platformReports, builder: (_, __) => const PlatformReportsScreen()),
+    GoRoute(path: AppRoutes.platformNotifications, builder: (_, __) => const PlatformNotificationsScreen()),
   ],
 );

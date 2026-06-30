@@ -10,6 +10,8 @@ class StaffShell extends StatelessWidget {
   static const _tabs = [
     AppRoutes.staffDashboard,
     AppRoutes.staffAppointments,
+    AppRoutes.staffCustomers,
+    AppRoutes.staffBilling,
   ];
 
   int _currentIndex(BuildContext context) {
@@ -31,6 +33,7 @@ class StaffShell extends StatelessWidget {
         backgroundColor: QDColors.surface,
         selectedFontSize: 11,
         unselectedFontSize: 11,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.today_outlined),
@@ -41,6 +44,16 @@ class StaffShell extends StatelessWidget {
             icon: Icon(Icons.event_note_outlined),
             activeIcon: Icon(Icons.event_note),
             label: 'Appointments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outlined),
+            activeIcon: Icon(Icons.people),
+            label: 'Customers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_outlined),
+            activeIcon: Icon(Icons.receipt_long),
+            label: 'Billing',
           ),
         ],
       ),
