@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/service_model.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -50,10 +50,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: QDColors.surface,
+      backgroundColor: QDPalette.surfaceCard,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(QDRadius.sheet))),
       builder: (_) => _AddServiceSheet(
         tenantId: _tenantId!,
         repo: _repo,
@@ -65,12 +65,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('Services')),
       floatingActionButton: FloatingActionButton(
         onPressed: _tenantId != null ? _showAddSheet : null,
-        backgroundColor: QDColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add_rounded),
       ),
       body: _loading
           ? const QDLoading()
@@ -84,11 +83,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
+                      color: QDPalette.primary500,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(QDSpace.screenPad),
                         itemCount: _services!.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _ServiceCard(service: _services![i]),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: QDSpace.cardGap),
+                        itemBuilder: (_, i) =>
+                            _ServiceCard(service: _services![i]),
                       ),
                     ),
     );
@@ -102,11 +104,12 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
       ),
       child: Row(
         children: [
@@ -114,10 +117,10 @@ class _ServiceCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: QDColors.primaryLight,
-              borderRadius: BorderRadius.circular(10),
+              color: QDPalette.primary50,
+              borderRadius: BorderRadius.circular(QDRadius.iconChip),
             ),
-            child: const Icon(Icons.spa_outlined, color: QDColors.primary),
+            child: const Icon(Icons.spa_outlined, color: QDPalette.primary500, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -125,10 +128,15 @@ class _ServiceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(service.serviceName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: QDPalette.neutral800)),
                 const SizedBox(height: 2),
-                Text('${service.durationMinutes} min · ${service.category ?? "General"}',
-                    style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                Text(
+                    '${service.durationMinutes} min · ${service.category ?? "General"}',
+                    style: const TextStyle(
+                        color: QDPalette.neutral500, fontSize: 13)),
               ],
             ),
           ),
@@ -136,19 +144,25 @@ class _ServiceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(QDCurrency.format(service.price),
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: QDColors.primary)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: QDPalette.primary600,
+                      letterSpacing: -0.3)),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: service.isActive ? QDColors.success.withValues(alpha: 0.1) : QDColors.textHint.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: service.isActive ? QDPalette.successBg : QDPalette.neutral50,
+                  borderRadius: BorderRadius.circular(QDRadius.full),
                 ),
                 child: Text(
                   service.isActive ? 'Active' : 'Inactive',
                   style: TextStyle(
                     fontSize: 11,
-                    color: service.isActive ? QDColors.success : QDColors.textHint,
+                    color: service.isActive
+                        ? QDPalette.success500
+                        : QDPalette.neutral400,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -165,7 +179,8 @@ class _AddServiceSheet extends StatefulWidget {
   final int tenantId;
   final BusinessRepository repo;
   final VoidCallback onSaved;
-  const _AddServiceSheet({required this.tenantId, required this.repo, required this.onSaved});
+  const _AddServiceSheet(
+      {required this.tenantId, required this.repo, required this.onSaved});
 
   @override
   State<_AddServiceSheet> createState() => _AddServiceSheetState();
@@ -179,7 +194,9 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
   String _category = 'HAIR';
   bool _loading = false;
 
-  static const _categories = ['HAIR', 'SKIN', 'NAIL', 'MASSAGE', 'DENTAL', 'GENERAL'];
+  static const _categories = [
+    'HAIR', 'SKIN', 'NAIL', 'MASSAGE', 'DENTAL', 'GENERAL'
+  ];
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -197,7 +214,8 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: QDColors.error),
+          SnackBar(content: Text(e.toString()),
+              backgroundColor: QDPalette.error500),
         );
         setState(() => _loading = false);
       }
@@ -207,31 +225,40 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          QDSpace.screenPad, QDSpace.x5, QDSpace.screenPad,
+          MediaQuery.of(context).viewInsets.bottom + QDSpace.x5),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Service', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 20),
+            const Text('Add Service',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                    color: QDPalette.neutral900)),
+            const SizedBox(height: QDSpace.x5),
             _field(_name, 'Service Name', required: true),
             Row(
               children: [
-                Expanded(child: _field(_price, 'Price', keyboardType: TextInputType.number, required: true)),
-                const SizedBox(width: 12),
-                Expanded(child: _field(_duration, 'Duration (min)', keyboardType: TextInputType.number, required: true)),
+                Expanded(child: _field(_price, 'Price',
+                    keyboardType: TextInputType.number, required: true)),
+                const SizedBox(width: QDSpace.x3),
+                Expanded(child: _field(_duration, 'Duration (min)',
+                    keyboardType: TextInputType.number, required: true)),
               ],
             ),
             DropdownButtonFormField<String>(
               initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
               onChanged: (v) => setState(() => _category = v ?? _category),
             ),
-            const SizedBox(height: 20),
-            QDButton(label: 'Save Service', isLoading: _loading, onPressed: _save),
+            const SizedBox(height: QDSpace.x5),
+            QDButton(
+                label: 'Save Service', isLoading: _loading, onPressed: _save),
           ],
         ),
       ),
@@ -241,15 +268,22 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
   Widget _field(TextEditingController c, String label,
       {TextInputType? keyboardType, bool required = false}) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: QDSpace.x3),
         child: TextFormField(
           controller: c,
           keyboardType: keyboardType,
-          decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-          validator: required ? (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null : null,
+          decoration: InputDecoration(labelText: label),
+          validator: required
+              ? (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null
+              : null,
         ),
       );
 
   @override
-  void dispose() { _name.dispose(); _price.dispose(); _duration.dispose(); super.dispose(); }
+  void dispose() {
+    _name.dispose();
+    _price.dispose();
+    _duration.dispose();
+    super.dispose();
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/models/platform_models.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/widgets/qd_loading.dart';
@@ -53,10 +54,11 @@ class _PlatformPlansScreenState extends State<PlatformPlansScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Subscription Plans'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
         ],
       ),
       body: _loading
@@ -64,13 +66,18 @@ class _PlatformPlansScreenState extends State<PlatformPlansScreen> {
           : _error != null
               ? QDError(message: _error!, onRetry: _load)
               : _plans.isEmpty
-                  ? const QDEmptyState(title: 'No Plans', subtitle: 'No subscription plans found.')
+                  ? const QDEmptyState(
+                      title: 'No Plans',
+                      subtitle: 'No subscription plans found.',
+                      icon: Icons.card_membership_rounded,
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
+                      color: QDPalette.primary500,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(QDSpace.screenPad),
                         itemCount: _plans.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: QDSpace.cardGap),
                         itemBuilder: (_, i) => _PlanCard(plan: _plans[i], onToggle: () => _toggle(_plans[i])),
                       ),
                     ),
@@ -86,81 +93,93 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(plan.planName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 2),
-                      Text(plan.planCode, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
-                    ],
-                  ),
+    return Container(
+      padding: const EdgeInsets.all(QDSpace.cardPad),
+      decoration: BoxDecoration(
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(plan.planName,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16,
+                            color: QDPalette.neutral900, letterSpacing: -0.2)),
+                    const SizedBox(height: 2),
+                    Text(plan.planCode,
+                        style: const TextStyle(fontSize: 12, color: QDPalette.neutral400,
+                            fontWeight: FontWeight.w500)),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: plan.isActive ? Colors.green.shade100 : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    plan.isActive ? 'Active' : 'Inactive',
-                    style: TextStyle(
-                      color: plan.isActive ? Colors.green.shade800 : Colors.grey.shade700,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (plan.description != null && plan.description!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(plan.description!, style: theme.textTheme.bodySmall),
+              ),
+              QDStatusChip(
+                label: plan.isActive ? 'Active' : 'Inactive',
+                color: plan.isActive ? QDPalette.success700 : QDPalette.neutral500,
+                bgColor: plan.isActive ? QDPalette.successBg : QDPalette.neutral50,
+              ),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _PriceChip(label: 'Monthly', value: QDCurrency.format(plan.monthlyPrice)),
-                const SizedBox(width: 12),
-                _PriceChip(label: 'Annual', value: QDCurrency.format(plan.annualPrice)),
-                const SizedBox(width: 12),
-                _PriceChip(label: 'Trial', value: '${plan.trialDays}d'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                _LimitChip(label: 'Users', value: '${plan.maxUsers}'),
-                _LimitChip(label: 'Staff', value: '${plan.maxStaff}'),
-                _LimitChip(label: 'Customers', value: '${plan.maxCustomers}'),
-                _LimitChip(label: 'Branches', value: '${plan.maxBranches}'),
-                _LimitChip(label: 'Appts/mo', value: '${plan.maxAppointmentsPerMonth}'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${plan.activeSubscriberCount} subscribers', style: theme.textTheme.bodySmall),
-                TextButton(
-                  onPressed: onToggle,
-                  child: Text(plan.isActive ? 'Deactivate' : 'Activate'),
-                ),
-              ],
-            ),
+          ),
+          if (plan.description != null && plan.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(plan.description!,
+                style: const TextStyle(fontSize: 13, color: QDPalette.neutral500, height: 1.4)),
           ],
-        ),
+          const SizedBox(height: 14),
+          // Price row
+          Row(
+            children: [
+              _PriceChip(label: 'Monthly', value: QDCurrency.format(plan.monthlyPrice)),
+              const SizedBox(width: 16),
+              _PriceChip(label: 'Annual', value: QDCurrency.format(plan.annualPrice)),
+              const SizedBox(width: 16),
+              _PriceChip(label: 'Trial', value: '${plan.trialDays}d'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Limits
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _LimitChip(label: 'Users', value: '${plan.maxUsers}'),
+              _LimitChip(label: 'Staff', value: '${plan.maxStaff}'),
+              _LimitChip(label: 'Customers', value: '${plan.maxCustomers}'),
+              _LimitChip(label: 'Branches', value: '${plan.maxBranches}'),
+              _LimitChip(label: 'Appts/mo', value: '${plan.maxAppointmentsPerMonth}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: QDPalette.neutral100),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${plan.activeSubscriberCount} subscribers',
+                style: const TextStyle(fontSize: 12, color: QDPalette.neutral400),
+              ),
+              GestureDetector(
+                onTap: onToggle,
+                child: Text(
+                  plan.isActive ? 'Deactivate' : 'Activate',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: plan.isActive ? QDPalette.error500 : QDPalette.success500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -176,8 +195,10 @@ class _PriceChip extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 10, color: QDPalette.neutral400,
+            fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+            color: QDPalette.neutral800)),
       ],
     );
   }
@@ -191,13 +212,17 @@ class _LimitChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade100),
+        color: QDPalette.primary50,
+        borderRadius: BorderRadius.circular(QDRadius.xs),
+        border: Border.all(color: QDPalette.primary100),
       ),
-      child: Text('$label: $value', style: TextStyle(fontSize: 11, color: Colors.blue.shade800)),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(fontSize: 11, color: QDPalette.primary600,
+            fontWeight: FontWeight.w500),
+      ),
     );
   }
 }

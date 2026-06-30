@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../app/themes.dart';
+import '../../../app/design_system/design_system.dart';
 import '../../../app/routes.dart';
 import '../../../core/auth/token_storage.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -39,85 +39,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Sign Out'),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               context.read<AuthBloc>().add(LogoutRequested());
               context.go(AppRoutes.login);
             },
-            child: const Text('Sign Out', style: TextStyle(color: QDColors.error)),
+            child: const Text('Sign Out',
+                style: TextStyle(color: QDPalette.error500)),
           ),
         ],
       ),
     );
   }
 
-  String _roleLabel(String code) {
-    return switch (code) {
-      'PLATFORM_ADMIN' => 'Platform Administrator',
-      'BUSINESS_OWNER' => 'Business Owner',
-      'BRANCH_MANAGER' => 'Branch Manager',
-      'RECEPTIONIST' => 'Receptionist',
-      'STYLIST' => 'Stylist',
-      'DOCTOR' => 'Doctor',
-      'STAFF' => 'Staff',
-      _ => code,
-    };
-  }
+  String _roleLabel(String code) => switch (code) {
+    'PLATFORM_ADMIN'  => 'Platform Administrator',
+    'BUSINESS_OWNER'  => 'Business Owner',
+    'BRANCH_MANAGER'  => 'Branch Manager',
+    'RECEPTIONIST'    => 'Receptionist',
+    'STYLIST'         => 'Stylist',
+    'DOCTOR'          => 'Doctor',
+    'STAFF'           => 'Staff',
+    _                 => code,
+  };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('My Profile')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(QDSpace.screenPad),
         children: [
-          // Avatar + name
+          // Avatar card
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(QDSpace.x6),
             decoration: BoxDecoration(
-              color: QDColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: QDColors.border),
+              color: QDPalette.surfaceCard,
+              borderRadius: BorderRadius.circular(QDRadius.card),
+              border: Border.all(color: QDPalette.neutral100),
+              boxShadow: QDShadow.card,
             ),
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: QDColors.primary,
-                  child: Text(
-                    _name.isNotEmpty ? _name[0].toUpperCase() : 'U',
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                QDAvatar(name: _name.isNotEmpty ? _name : 'User', size: 80, radius: QDRadius.xl),
+                const SizedBox(height: 14),
                 Text(
                   _name,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: QDColors.textPrimary,
+                    color: QDPalette.neutral900,
+                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(_email, style: const TextStyle(color: QDColors.textSecondary, fontSize: 14)),
-                const SizedBox(height: 8),
+                Text(_email,
+                    style: const TextStyle(
+                        color: QDPalette.neutral500, fontSize: 14)),
+                const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: QDColors.primaryLight,
-                    borderRadius: BorderRadius.circular(20),
+                    color: QDPalette.primary50,
+                    borderRadius: BorderRadius.circular(QDRadius.full),
+                    border: Border.all(color: QDPalette.primary100),
                   ),
                   child: Text(
                     _roleLabel(_role),
                     style: const TextStyle(
-                      color: QDColors.primary,
+                      color: QDPalette.primary600,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -126,26 +122,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: QDSpace.cardGap),
 
           // Actions
           _tile(
-            icon: Icons.lock_outline,
+            icon: Icons.lock_outline_rounded,
             title: 'Change Password',
             onTap: () => context.push(AppRoutes.changePassword),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: QDSpace.x2),
           _tile(
-            icon: Icons.logout,
+            icon: Icons.logout_rounded,
             title: 'Sign Out',
-            color: QDColors.error,
+            color: QDPalette.error500,
             onTap: _logout,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: QDSpace.x8),
           const Center(
             child: Text(
               'QuiverDesk v1.0.0',
-              style: TextStyle(fontSize: 12, color: QDColors.textHint),
+              style: TextStyle(fontSize: 12, color: QDPalette.neutral300),
             ),
           ),
         ],
@@ -159,25 +155,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Color? color,
     required VoidCallback onTap,
   }) {
-    final c = color ?? QDColors.textPrimary;
+    final c = color ?? QDPalette.neutral800;
     return Material(
-      color: QDColors.surface,
-      borderRadius: BorderRadius.circular(12),
+      color: QDPalette.surfaceCard,
+      borderRadius: BorderRadius.circular(QDRadius.card),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        splashColor: QDPalette.primary50,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+              horizontal: QDSpace.screenPad, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: QDColors.border),
+            borderRadius: BorderRadius.circular(QDRadius.card),
+            border: Border.all(color: QDPalette.neutral100),
           ),
           child: Row(
             children: [
               Icon(icon, color: c, size: 22),
               const SizedBox(width: 12),
-              Expanded(child: Text(title, style: TextStyle(color: c, fontSize: 15, fontWeight: FontWeight.w500))),
-              const Icon(Icons.chevron_right, color: QDColors.textHint, size: 20),
+              Expanded(
+                child: Text(title,
+                    style: TextStyle(
+                        color: c, fontSize: 15, fontWeight: FontWeight.w500)),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: QDPalette.neutral300, size: 20),
             ],
           ),
         ),

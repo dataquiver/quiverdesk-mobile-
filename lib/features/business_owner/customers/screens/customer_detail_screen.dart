@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/appointment_model.dart';
 import '../../../../core/models/customer_model.dart';
@@ -63,20 +63,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     if (await canLaunchUrl(uri)) launchUrl(uri);
   }
 
-  Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'SCHEDULED' => QDColors.scheduled,
-    'CONFIRMED' => QDColors.confirmed,
-    'IN_PROGRESS' => QDColors.inProgress,
-    'COMPLETED' => QDColors.completed,
-    'CANCELLED' => QDColors.cancelled,
-    _ => QDColors.textHint,
-  };
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
-      appBar: AppBar(title: Text(_customer?.fullName ?? 'Customer Details')),
+      backgroundColor: QDPalette.surfaceBackground,
+      appBar: AppBar(
+        title: Text(_customer?.fullName ?? 'Customer Details'),
+      ),
       body: _isLoading
           ? const QDLoading()
           : _error != null
@@ -91,104 +84,131 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       children: [
         // Header
         Container(
-          color: QDColors.surface,
-          padding: const EdgeInsets.all(20),
+          color: QDPalette.surfaceCard,
+          padding: const EdgeInsets.all(QDSpace.x5),
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: QDColors.primary,
-                child: Text(c.initials,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-              ),
+              QDAvatar(name: c.fullName, size: 72, radius: QDRadius.md),
               const SizedBox(height: 12),
               Text(c.fullName,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: QDColors.textPrimary)),
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: QDPalette.neutral900,
+                      letterSpacing: -0.3)),
               if (c.mobileNumber != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 GestureDetector(
                   onTap: () => _call(c.mobileNumber!),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.phone, size: 14, color: QDColors.primary),
-                      const SizedBox(width: 4),
-                      Text(c.mobileNumber!,
-                          style: const TextStyle(color: QDColors.primary, fontWeight: FontWeight.w500, fontSize: 14)),
-                    ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: QDPalette.successBg,
+                      borderRadius: BorderRadius.circular(QDRadius.full),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.call_rounded,
+                            size: 14, color: QDPalette.success500),
+                        const SizedBox(width: 5),
+                        Text(c.mobileNumber!,
+                            style: const TextStyle(
+                                color: QDPalette.success500,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14)),
+                      ],
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _stat('Visits', '${c.totalVisits ?? 0}', QDColors.primary),
-                  _dividerV(),
-                  _stat('Total Spent', QDCurrency.compact(c.totalSpent ?? 0), QDColors.success),
-                  _dividerV(),
-                  _stat('Last Visit',
-                      c.lastVisitDate != null
-                          ? '${c.lastVisitDate!.day}/${c.lastVisitDate!.month}'
-                          : 'N/A',
-                      QDColors.textSecondary),
+                  _stat('Visits', '${c.totalVisits ?? 0}', QDPalette.primary500),
+                  Container(width: 1, height: 36, color: QDPalette.neutral100),
+                  _stat('Total Spent',
+                      QDCurrency.compact(c.totalSpent ?? 0), QDPalette.success500),
+                  Container(width: 1, height: 36, color: QDPalette.neutral100),
+                  _stat(
+                    'Last Visit',
+                    c.lastVisitDate != null
+                        ? '${c.lastVisitDate!.day}/${c.lastVisitDate!.month}'
+                        : 'N/A',
+                    QDPalette.neutral400,
+                  ),
                 ],
               ),
             ],
           ),
         ),
-        const Divider(height: 1),
+        Container(height: 1, color: QDPalette.neutral100),
 
         // Info section
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (c.email != null) ...[
-                _infoRow(Icons.email_outlined, c.email!),
-                const SizedBox(height: 8),
-              ],
-              if (c.gender != null) ...[
-                _infoRow(Icons.person_outline, c.gender!),
-                const SizedBox(height: 8),
-              ],
-              if (c.dateOfBirth != null) ...[
-                _infoRow(Icons.cake_outlined,
-                    '${c.dateOfBirth!.day}/${c.dateOfBirth!.month}/${c.dateOfBirth!.year}'),
-                const SizedBox(height: 8),
-              ],
-              if (c.notes != null && c.notes!.isNotEmpty) ...[
-                _infoRow(Icons.notes_outlined, c.notes!),
-                const SizedBox(height: 8),
-              ],
-            ],
+        if (c.email != null || c.gender != null || c.dateOfBirth != null || c.notes != null)
+          Padding(
+            padding: const EdgeInsets.all(QDSpace.screenPad),
+            child: Container(
+              decoration: BoxDecoration(
+                color: QDPalette.surfaceCard,
+                borderRadius: BorderRadius.circular(QDRadius.card),
+                border: Border.all(color: QDPalette.neutral100),
+                boxShadow: QDShadow.card,
+              ),
+              child: Column(
+                children: [
+                  if (c.email != null) ...[
+                    _infoRow(Icons.email_outlined, 'Email', c.email!),
+                    Container(height: 1, color: QDPalette.neutral50),
+                  ],
+                  if (c.gender != null) ...[
+                    _infoRow(Icons.person_outline_rounded, 'Gender', c.gender!),
+                    Container(height: 1, color: QDPalette.neutral50),
+                  ],
+                  if (c.dateOfBirth != null) ...[
+                    _infoRow(Icons.cake_outlined, 'Birthday',
+                        '${c.dateOfBirth!.day}/${c.dateOfBirth!.month}/${c.dateOfBirth!.year}'),
+                    Container(height: 1, color: QDPalette.neutral50),
+                  ],
+                  if (c.notes != null && c.notes!.isNotEmpty)
+                    _infoRow(Icons.notes_rounded, 'Notes', c.notes!),
+                ],
+              ),
+            ),
           ),
-        ),
 
         // Appointment history
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text('Appointment History (${_appointments.length})',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 8, QDSpace.screenPad, 8),
+          child: Text(
+            'Appointment History (${_appointments.length})',
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: QDPalette.neutral800),
+          ),
         ),
         if (_appointments.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
+          Padding(
+            padding: const EdgeInsets.all(QDSpace.x6),
             child: Center(
-              child: Text('No appointment history', style: TextStyle(color: QDColors.textSecondary)),
+              child: Text('No appointment history',
+                  style: TextStyle(color: QDPalette.neutral400)),
             ),
           )
         else
           ..._appointments.map((a) {
-            final sc = _statusColor(a.status);
             return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(
+                  horizontal: QDSpace.screenPad, vertical: 4),
+              padding: const EdgeInsets.all(QDSpace.cardPad),
               decoration: BoxDecoration(
-                color: QDColors.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: QDColors.border),
+                color: QDPalette.surfaceCard,
+                borderRadius: BorderRadius.circular(QDRadius.card),
+                border: Border.all(color: QDPalette.neutral100),
+                boxShadow: QDShadow.card,
               ),
               child: Row(
                 children: [
@@ -197,11 +217,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(a.serviceName,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        const SizedBox(height: 2),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: QDPalette.neutral800)),
+                        const SizedBox(height: 3),
                         Text(
                           '${QDDateUtils.formatDate(a.appointmentDate)} · ${QDDateUtils.formatTime(a.startTime)}',
-                          style: const TextStyle(color: QDColors.textSecondary, fontSize: 12),
+                          style: const TextStyle(
+                              color: QDPalette.neutral400, fontSize: 12),
                         ),
                       ],
                     ),
@@ -209,19 +233,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: sc.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(a.status,
-                            style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w600)),
-                      ),
+                      QDStatusChip.fromStatus(a.status),
                       if (a.servicePrice != null) ...[
                         const SizedBox(height: 4),
                         Text('₹${a.servicePrice!.toStringAsFixed(0)}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: QDPalette.neutral800)),
                       ],
                     ],
                   ),
@@ -229,7 +248,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               ),
             );
           }),
-        const SizedBox(height: 24),
+        const SizedBox(height: QDSpace.x6),
       ],
     );
   }
@@ -237,24 +256,41 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget _stat(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: -0.5)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 12, color: QDColors.textSecondary)),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: QDPalette.neutral400)),
       ],
     );
   }
 
-  Widget _dividerV() {
-    return Container(width: 1, height: 36, color: QDColors.divider);
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: QDColors.textHint),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(color: QDColors.textSecondary, fontSize: 14))),
-      ],
+  Widget _infoRow(IconData icon, String label, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: QDSpace.screenPad, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: QDPalette.neutral300),
+          const SizedBox(width: 10),
+          Text(label,
+              style: const TextStyle(
+                  color: QDPalette.neutral400, fontSize: 13)),
+          const Spacer(),
+          Flexible(
+            child: Text(text,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    color: QDPalette.neutral700,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500)),
+          ),
+        ],
+      ),
     );
   }
 }

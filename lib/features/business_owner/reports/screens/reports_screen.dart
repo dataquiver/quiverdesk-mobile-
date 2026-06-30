@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/widgets/qd_error.dart';
@@ -68,7 +68,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         barRods: [
           BarChartRodData(
             toY: amount,
-            color: QDColors.primary,
+            color: QDPalette.primary500,
             width: 16,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           ),
@@ -80,12 +80,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Reports'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline_rounded),
             onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
@@ -98,11 +98,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   children: [
                     // Period selector
                     Container(
-                      color: QDColors.surface,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: QDPalette.surfaceCard,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: QDSpace.screenPad, vertical: 8),
                       child: Row(
                         children: [
-                          const Text('Period:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          const Text('Period:',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: QDPalette.neutral600)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: SizedBox(
@@ -119,20 +124,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         _load();
                                       },
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: sel ? QDColors.primary : QDColors.background,
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: sel
+                                              ? QDPalette.primary500
+                                              : QDPalette.surfaceBackground,
+                                          borderRadius: BorderRadius.circular(
+                                              QDRadius.xs),
                                           border: Border.all(
-                                            color: sel ? QDColors.primary : QDColors.border,
+                                            color: sel
+                                                ? QDPalette.primary500
+                                                : QDPalette.neutral200,
                                           ),
                                         ),
                                         child: Text(
                                           e.value,
                                           style: TextStyle(
-                                            color: sel ? Colors.white : QDColors.textSecondary,
+                                            color: sel
+                                                ? Colors.white
+                                                : QDPalette.neutral500,
                                             fontSize: 12,
-                                            fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+                                            fontWeight: sel
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
                                           ),
                                         ),
                                       ),
@@ -145,64 +160,80 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
+                    Container(height: 1, color: QDPalette.neutral100),
 
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: _load,
+                        color: QDPalette.primary500,
                         child: ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(QDSpace.screenPad),
                           children: [
-                            // Key metrics
                             Row(
                               children: [
-                                Expanded(child: _metricCard(
-                                  'Revenue',
-                                  QDCurrency.compact(_d('totalRevenue')),
-                                  Icons.currency_rupee,
-                                  QDColors.success,
-                                )),
-                                const SizedBox(width: 12),
-                                Expanded(child: _metricCard(
-                                  'Appointments',
-                                  '${_i('totalAppointments')}',
-                                  Icons.calendar_today,
-                                  QDColors.primary,
-                                )),
+                                Expanded(
+                                  child: _metricCard(
+                                    'Revenue',
+                                    QDCurrency.compact(_d('totalRevenue')),
+                                    Icons.currency_rupee_rounded,
+                                    QDPalette.success500,
+                                    QDPalette.successBg,
+                                  ),
+                                ),
+                                const SizedBox(width: QDSpace.cardGap),
+                                Expanded(
+                                  child: _metricCard(
+                                    'Appointments',
+                                    '${_i('totalAppointments')}',
+                                    Icons.calendar_today_rounded,
+                                    QDPalette.primary500,
+                                    QDPalette.primary50,
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: QDSpace.cardGap),
                             Row(
                               children: [
-                                Expanded(child: _metricCard(
-                                  'New Customers',
-                                  '${_i('newCustomers')}',
-                                  Icons.person_add_outlined,
-                                  QDColors.secondary,
-                                )),
-                                const SizedBox(width: 12),
-                                Expanded(child: _metricCard(
-                                  'Avg Invoice',
-                                  QDCurrency.compact(_d('avgInvoiceValue')),
-                                  Icons.receipt_outlined,
-                                  QDColors.accent,
-                                )),
+                                Expanded(
+                                  child: _metricCard(
+                                    'New Customers',
+                                    '${_i('newCustomers')}',
+                                    Icons.person_add_rounded,
+                                    QDPalette.info500,
+                                    QDPalette.infoBg,
+                                  ),
+                                ),
+                                const SizedBox(width: QDSpace.cardGap),
+                                Expanded(
+                                  child: _metricCard(
+                                    'Avg Invoice',
+                                    QDCurrency.compact(_d('avgInvoiceValue')),
+                                    Icons.receipt_outlined,
+                                    QDPalette.warning500,
+                                    QDPalette.warningBg,
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: QDSpace.sectionGap),
 
                             // Revenue chart
                             if ((_data?['revenueByDay'] as List?)?.isNotEmpty ?? false) ...[
                               const Text('Revenue Trend',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 12),
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: QDPalette.neutral800)),
+                              const SizedBox(height: QDSpace.cardGap),
                               Container(
                                 height: 200,
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(QDSpace.cardPad),
                                 decoration: BoxDecoration(
-                                  color: QDColors.surface,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: QDColors.border),
+                                  color: QDPalette.surfaceCard,
+                                  borderRadius: BorderRadius.circular(QDRadius.card),
+                                  border: Border.all(color: QDPalette.neutral100),
+                                  boxShadow: QDShadow.card,
                                 ),
                                 child: BarChart(
                                   BarChartData(
@@ -210,50 +241,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     gridData: const FlGridData(show: false),
                                     borderData: FlBorderData(show: false),
                                     titlesData: const FlTitlesData(
-                                      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      leftTitles: AxisTitles(
+                                          sideTitles: SideTitles(showTitles: false)),
+                                      topTitles: AxisTitles(
+                                          sideTitles: SideTitles(showTitles: false)),
+                                      rightTitles: AxisTitles(
+                                          sideTitles: SideTitles(showTitles: false)),
+                                      bottomTitles: AxisTitles(
+                                          sideTitles: SideTitles(showTitles: false)),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: QDSpace.sectionGap),
                             ],
 
                             // Top services
                             if ((_data?['topServices'] as List?)?.isNotEmpty ?? false) ...[
                               const Text('Top Services',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 12),
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: QDPalette.neutral800)),
+                              const SizedBox(height: QDSpace.cardGap),
                               ...((_data!['topServices'] as List<dynamic>).map((s) {
                                 final name = s['serviceName'] as String? ?? '';
                                 final count = s['count'] as int? ?? 0;
                                 final rev = (s['revenue'] as num?)?.toDouble() ?? 0;
                                 return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  margin: const EdgeInsets.only(bottom: QDSpace.x2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: QDSpace.cardPad, vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: QDColors.surface,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: QDColors.border),
+                                    color: QDPalette.surfaceCard,
+                                    borderRadius: BorderRadius.circular(QDRadius.card),
+                                    border: Border.all(color: QDPalette.neutral100),
+                                    boxShadow: QDShadow.card,
                                   ),
                                   child: Row(
                                     children: [
                                       Expanded(
                                         child: Text(name,
-                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                                color: QDPalette.neutral800)),
                                       ),
                                       Text('$count appts  ',
-                                          style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                                          style: const TextStyle(
+                                              color: QDPalette.neutral400,
+                                              fontSize: 13)),
                                       Text(QDCurrency.compact(rev),
-                                          style: const TextStyle(fontWeight: FontWeight.w700, color: QDColors.success, fontSize: 14)),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: QDPalette.success500,
+                                              fontSize: 14)),
                                     ],
                                   ),
                                 );
                               })),
                             ],
-                            const SizedBox(height: 16),
+                            const SizedBox(height: QDSpace.screenPad),
                           ],
                         ),
                       ),
@@ -263,22 +311,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _metricCard(String label, String value, IconData icon, Color color) {
+  Widget _metricCard(
+      String label, String value, IconData icon, Color color, Color bg) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
       ),
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: bg,
+              borderRadius: BorderRadius.circular(QDRadius.iconChip),
             ),
             child: Icon(icon, color: color, size: 20),
           ),
@@ -288,9 +338,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(value,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: QDColors.textPrimary),
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: QDPalette.neutral900,
+                        letterSpacing: -0.5),
                     overflow: TextOverflow.ellipsis),
-                Text(label, style: const TextStyle(fontSize: 11, color: QDColors.textSecondary)),
+                const SizedBox(height: 1),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: QDPalette.neutral400)),
               ],
             ),
           ),

@@ -1,5 +1,5 @@
-﻿import 'package:flutter/material.dart';
-import '../../app/themes.dart';
+import 'package:flutter/material.dart';
+import '../../app/design_system/design_system.dart';
 import 'qd_button.dart';
 
 class QDEmptyState extends StatelessWidget {
@@ -22,36 +22,42 @@ class QDEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 88,
-              height: 88,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
-                color: QDColors.primaryLight,
-                borderRadius: BorderRadius.circular(44),
+                color: QDPalette.primary50,
+                borderRadius: BorderRadius.circular(QDRadius.full),
               ),
-              child: Icon(icon, color: QDColors.primary, size: 44),
+              child: Icon(icon, color: QDPalette.primary400, size: 36),
             ),
             const SizedBox(height: 20),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: QDColors.textPrimary,
+                color: QDPalette.neutral800,
+                letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: QDColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: QDPalette.neutral400,
+                height: 1.5,
+              ),
             ),
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               QDButton(label: actionLabel!, onPressed: onAction),
             ],
           ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/customer_model.dart';
 import '../../../../core/models/service_model.dart';
@@ -51,7 +51,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final idStr = await TokenStorage.getBusinessId();
     _tenantId = idStr != null ? int.tryParse(idStr) : null;
     if (_tenantId == null) {
-      if (mounted) setState(() { _loadingData = false; _loadError = 'No business context'; });
+      if (mounted) {
+        setState(() {
+          _loadingData = false;
+          _loadError = 'No business context';
+        });
+      }
       return;
     }
     try {
@@ -69,7 +74,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _loadingData = false; _loadError = e.toString(); });
+      if (mounted) {
+        setState(() { _loadingData = false; _loadError = e.toString(); });
+      }
     }
   }
 
@@ -93,9 +100,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedCustomer == null || _selectedService == null || _selectedStaff == null) {
+    if (_selectedCustomer == null ||
+        _selectedService == null ||
+        _selectedStaff == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields'), backgroundColor: QDColors.error),
+        const SnackBar(content: Text('Please fill all required fields')),
       );
       return;
     }
@@ -112,11 +121,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Appointment created!'),
-            backgroundColor: QDColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text('Appointment created!')),
         );
         context.pop();
       }
@@ -124,7 +129,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: QDColors.error),
+          SnackBar(content: Text('Failed: $e'),
+              backgroundColor: QDPalette.error500),
         );
       }
     }
@@ -133,40 +139,44 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('New Appointment')),
       body: _loadingData
-          ? const Center(child: CircularProgressIndicator(color: QDColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: QDPalette.primary500))
           : _loadError != null
-              ? Center(child: Text(_loadError!, style: const TextStyle(color: QDColors.error)))
+              ? Center(
+                  child: Text(_loadError!,
+                      style: const TextStyle(color: QDPalette.error500)))
               : Form(
                   key: _formKey,
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(QDSpace.screenPad),
                     children: [
-                      // Customer
                       _label('Customer *'),
                       _dropdown<CustomerModel>(
                         hint: 'Select customer',
                         value: _selectedCustomer,
                         items: _customers,
-                        display: (c) => '${c.fullName} ${c.mobileNumber != null ? "(${c.mobileNumber})" : ""}',
-                        onChanged: (v) => setState(() => _selectedCustomer = v),
+                        display: (c) =>
+                            '${c.fullName}${c.mobileNumber != null ? " (${c.mobileNumber})" : ""}',
+                        onChanged: (v) =>
+                            setState(() => _selectedCustomer = v),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: QDSpace.x4),
 
-                      // Service
                       _label('Service *'),
                       _dropdown<ServiceModel>(
                         hint: 'Select service',
                         value: _selectedService,
                         items: _services,
-                        display: (s) => '${s.serviceName} – ₹${s.price.toStringAsFixed(0)}',
-                        onChanged: (v) => setState(() => _selectedService = v),
+                        display: (s) =>
+                            '${s.serviceName} – ₹${s.price.toStringAsFixed(0)}',
+                        onChanged: (v) =>
+                            setState(() => _selectedService = v),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: QDSpace.x4),
 
-                      // Staff
                       _label('Staff *'),
                       _dropdown<StaffMemberModel>(
                         hint: 'Assign staff',
@@ -175,9 +185,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                         display: (s) => s.fullName,
                         onChanged: (v) => setState(() => _selectedStaff = v),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: QDSpace.x4),
 
-                      // Date + Time
                       Row(
                         children: [
                           Expanded(
@@ -193,7 +202,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: QDSpace.x3),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,9 +218,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: QDSpace.x4),
 
-                      // Notes
                       _label('Notes (optional)'),
                       TextFormField(
                         controller: _notesCtrl,
@@ -221,15 +229,15 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           alignLabelWithHint: true,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: QDSpace.x6),
 
                       QDButton(
                         label: 'Book Appointment',
                         isLoading: _submitting,
-                        icon: Icons.event_available,
+                        icon: Icons.event_available_rounded,
                         onPressed: _submit,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: QDSpace.x4),
                     ],
                   ),
                 ),
@@ -239,7 +247,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(text,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: QDColors.textSecondary)),
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: QDPalette.neutral500)),
       );
 
   Widget _dropdown<T>({
@@ -252,17 +263,22 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.input),
+        border: Border.all(color: QDPalette.neutral200),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          hint: Text(hint, style: const TextStyle(color: QDColors.textHint)),
+          hint: Text(hint,
+              style: const TextStyle(color: QDPalette.neutral400, fontSize: 14)),
           items: items
-              .map((e) => DropdownMenuItem<T>(value: e, child: Text(display(e), overflow: TextOverflow.ellipsis)))
+              .map((e) => DropdownMenuItem<T>(
+                    value: e,
+                    child: Text(display(e), overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: QDPalette.neutral800)),
+                  ))
               .toList(),
           onChanged: onChanged,
         ),
@@ -276,16 +292,19 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: QDColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: QDColors.border),
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.input),
+          border: Border.all(color: QDPalette.neutral200),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: QDColors.primary),
+            Icon(icon, size: 18, color: QDPalette.primary500),
             const SizedBox(width: 8),
             Text(label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: QDColors.textPrimary)),
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: QDPalette.neutral800)),
           ],
         ),
       ),

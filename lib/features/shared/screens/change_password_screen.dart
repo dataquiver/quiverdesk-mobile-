@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../app/themes.dart';
+import '../../../app/design_system/design_system.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/widgets/qd_button.dart';
@@ -31,7 +31,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password changed successfully'), backgroundColor: QDColors.success),
+          const SnackBar(content: Text('Password changed successfully')),
         );
         context.pop();
       }
@@ -43,27 +43,64 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('Change Password')),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(QDSpace.x6),
             children: [
-              const Icon(Icons.lock_outline, size: 64, color: QDColors.primary),
-              const SizedBox(height: 24),
+              const SizedBox(height: QDSpace.x4),
+              // Icon header
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: QDPalette.primary50,
+                    borderRadius: BorderRadius.circular(QDRadius.md),
+                    border: Border.all(color: QDPalette.primary100),
+                  ),
+                  child: const Icon(Icons.lock_outline_rounded,
+                      size: 36, color: QDPalette.primary500),
+                ),
+              ),
+              const SizedBox(height: QDSpace.x5),
+              const Center(
+                child: Text('Update your password',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: QDPalette.neutral700)),
+              ),
+              const SizedBox(height: QDSpace.x6),
               _field(_current, 'Current Password'),
               _field(_newPass, 'New Password',
-                  validator: (v) => (v?.length ?? 0) < 6 ? 'Min 6 characters' : null),
+                  validator: (v) =>
+                      (v?.length ?? 0) < 6 ? 'Min 6 characters' : null),
               _field(_confirm, 'Confirm New Password',
-                  validator: (v) => v != _newPass.text ? 'Passwords do not match' : null),
+                  validator: (v) =>
+                      v != _newPass.text ? 'Passwords do not match' : null),
               if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!, style: const TextStyle(color: QDColors.error, fontSize: 13)),
+                const SizedBox(height: QDSpace.x2),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: QDPalette.errorBg,
+                    borderRadius: BorderRadius.circular(QDRadius.xs),
+                  ),
+                  child: Text(_error!,
+                      style: const TextStyle(
+                          color: QDPalette.error500, fontSize: 13)),
+                ),
               ],
-              const SizedBox(height: 24),
-              QDButton(label: 'Change Password', isLoading: _loading, onPressed: _submit),
+              const SizedBox(height: QDSpace.x6),
+              QDButton(
+                  label: 'Change Password',
+                  isLoading: _loading,
+                  icon: Icons.lock_reset_rounded,
+                  onPressed: _submit),
             ],
           ),
         ),
@@ -71,19 +108,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _field(TextEditingController c, String label, {String? Function(String?)? validator}) =>
+  Widget _field(TextEditingController c, String label,
+      {String? Function(String?)? validator}) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(bottom: QDSpace.x3),
         child: TextFormField(
           controller: c,
           obscureText: _obscure,
           decoration: InputDecoration(
             labelText: label,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            filled: true,
-            fillColor: QDColors.surface,
             suffixIcon: IconButton(
-              icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              icon: Icon(_obscure
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined),
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
@@ -93,7 +130,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   void dispose() {
-    _current.dispose(); _newPass.dispose(); _confirm.dispose();
+    _current.dispose();
+    _newPass.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 }

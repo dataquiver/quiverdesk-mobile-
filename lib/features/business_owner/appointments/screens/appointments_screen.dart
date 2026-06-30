@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/appointment_model.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -27,7 +28,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   String _selectedStatus = 'ALL';
   DateTime _selectedDate = DateTime.now();
 
-  static const _statuses = ['ALL', 'SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+  static const _statuses = [
+    'ALL', 'SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
+  ];
 
   @override
   void initState() {
@@ -45,7 +48,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (_tenantId == null) return;
     setState(() { _isLoading = true; _error = null; });
     try {
-      final dateStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
       final items = await _repo.getAppointments(
         _tenantId!,
         status: _selectedStatus == 'ALL' ? null : _selectedStatus,
@@ -71,18 +75,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'SCHEDULED' => QDColors.scheduled,
-    'CONFIRMED' => QDColors.confirmed,
-    'IN_PROGRESS' => QDColors.inProgress,
-    'COMPLETED' => QDColors.completed,
-    'CANCELLED' => QDColors.cancelled,
-    _ => QDColors.textHint,
+    'SCHEDULED'   => QDPalette.info500,
+    'CONFIRMED'   => QDPalette.success500,
+    'IN_PROGRESS' => QDPalette.warning500,
+    'COMPLETED'   => QDPalette.success700,
+    'CANCELLED'   => QDPalette.neutral400,
+    _             => QDPalette.neutral300,
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Appointments'),
         actions: [
@@ -92,7 +96,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             tooltip: 'Pick date',
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline_rounded),
             onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
@@ -101,11 +105,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         children: [
           // Date strip
           Container(
-            color: QDColors.surface,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: QDPalette.surfaceCard,
+            padding: const EdgeInsets.symmetric(horizontal: QDSpace.screenPad, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, size: 16, color: QDColors.primary),
+                Icon(Icons.calendar_today_outlined,
+                    size: 16, color: QDPalette.primary500),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _pickDate,
@@ -113,26 +118,29 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     QDDateUtils.dayLabel(_selectedDate),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: QDColors.primary,
+                      color: QDPalette.primary500,
                       fontSize: 14,
                     ),
                   ),
                 ),
                 const Spacer(),
                 Text('${_items.length} found',
-                    style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                    style: const TextStyle(
+                        color: QDPalette.neutral400, fontSize: 13)),
               ],
             ),
           ),
+          Container(height: 1, color: QDPalette.neutral100),
 
           // Status filter chips
           SizedBox(
-            height: 44,
+            height: 46,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: QDSpace.screenPad, vertical: 7),
               itemCount: _statuses.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
               itemBuilder: (_, i) {
                 final s = _statuses[i];
                 final selected = s == _selectedStatus;
@@ -143,10 +151,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     setState(() => _selectedStatus = s);
                     _load();
                   },
-                  selectedColor: QDColors.primaryLight,
-                  checkmarkColor: QDColors.primary,
+                  selectedColor: QDPalette.primary100,
+                  checkmarkColor: QDPalette.primary600,
                   labelStyle: TextStyle(
-                    color: selected ? QDColors.primary : QDColors.textSecondary,
+                    color: selected ? QDPalette.primary600 : QDPalette.neutral500,
                     fontSize: 12,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -156,8 +164,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               },
             ),
           ),
-
-          const Divider(height: 1),
+          Container(height: 1, color: QDPalette.neutral100),
 
           // List
           Expanded(
@@ -168,15 +175,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     : _items.isEmpty
                         ? QDEmptyState(
                             title: 'No appointments',
-                            subtitle: 'No appointments found for the selected filters.',
+                            subtitle:
+                                'No appointments found for the selected filters.',
                             icon: Icons.event_busy_outlined,
                             actionLabel: 'New Appointment',
-                            onAction: () => context.push(AppRoutes.newAppointment),
+                            onAction: () =>
+                                context.push(AppRoutes.newAppointment),
                           )
                         : RefreshIndicator(
                             onRefresh: _load,
+                            color: QDPalette.primary500,
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(12),
+                              padding:
+                                  const EdgeInsets.all(QDSpace.screenPad),
                               itemCount: _items.length,
                               itemBuilder: (_, i) => _card(_items[i]),
                             ),
@@ -185,8 +196,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.newAppointment),
-        child: const Icon(Icons.add),
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          context.push(AppRoutes.newAppointment);
+        },
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -194,13 +208,17 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Widget _card(AppointmentModel a) {
     final statusColor = _statusColor(a.status);
     return GestureDetector(
-      onTap: () => context.push('/business/appointments/${a.appointmentId}'),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        context.push('/business/appointments/${a.appointmentId}');
+      },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: QDSpace.x2),
         decoration: BoxDecoration(
-          color: QDColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: QDColors.border),
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.card),
+          border: Border.all(color: QDPalette.neutral100),
+          boxShadow: QDShadow.card,
         ),
         child: Row(
           children: [
@@ -209,15 +227,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               height: 80,
               decoration: BoxDecoration(
                 color: statusColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
-                ),
+                borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(QDRadius.card)),
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(QDSpace.cardPad),
                 child: Row(
                   children: [
                     Expanded(
@@ -225,14 +241,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(a.customerName,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: QDPalette.neutral800)),
                           const SizedBox(height: 3),
                           Text(a.serviceName,
-                              style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                              style: const TextStyle(
+                                  color: QDPalette.neutral500, fontSize: 13)),
                           const SizedBox(height: 3),
                           Text(
                             '${QDDateUtils.formatTime(a.startTime)} · ${a.staffName}',
-                            style: const TextStyle(color: QDColors.textHint, fontSize: 12),
+                            style: const TextStyle(
+                                color: QDPalette.neutral400, fontSize: 12),
                           ),
                         ],
                       ),
@@ -241,29 +262,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            a.status.replaceAll('_', ' '),
-                            style: TextStyle(
-                                color: statusColor, fontSize: 10, fontWeight: FontWeight.w600),
-                          ),
-                        ),
+                        QDStatusChip.fromStatus(a.status),
                         if (a.servicePrice != null) ...[
                           const SizedBox(height: 6),
                           Text(
                             '₹${a.servicePrice!.toStringAsFixed(0)}',
                             style: const TextStyle(
-                                fontWeight: FontWeight.w600, color: QDColors.textPrimary, fontSize: 14),
+                                fontWeight: FontWeight.w600,
+                                color: QDPalette.neutral800,
+                                fontSize: 14),
                           ),
                         ],
                       ],
                     ),
-                    const Icon(Icons.chevron_right, color: QDColors.textHint, size: 18),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: QDPalette.neutral300, size: 18),
                   ],
                 ),
               ),

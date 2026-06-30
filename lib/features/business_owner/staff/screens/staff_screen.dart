@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/staff_member_model.dart';
 import '../../../../core/widgets/qd_button.dart';
@@ -49,31 +49,43 @@ class _StaffScreenState extends State<StaffScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: QDColors.surface,
+      backgroundColor: QDPalette.surfaceCard,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _AddStaffSheet(tenantId: _tenantId!, repo: _repo, onSaved: _load),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(QDRadius.sheet))),
+      builder: (_) =>
+          _AddStaffSheet(tenantId: _tenantId!, repo: _repo, onSaved: _load),
     );
   }
 
-  static const _roleColors = {
-    'STYLIST': QDColors.primary,
-    'RECEPTIONIST': QDColors.secondary,
-    'STAFF': QDColors.warning,
-    'ASSISTANT': QDColors.textSecondary,
-    'BUSINESS_OWNER': QDColors.success,
+  Color _roleColor(String code) => switch (code) {
+    'STYLIST'        => QDPalette.primary500,
+    'RECEPTIONIST'   => QDPalette.info500,
+    'STAFF'          => QDPalette.warning500,
+    'ASSISTANT'      => QDPalette.neutral400,
+    'BUSINESS_OWNER' => QDPalette.success500,
+    'DOCTOR'         => QDPalette.error500,
+    _                => QDPalette.neutral400,
+  };
+
+  Color _roleBg(String code) => switch (code) {
+    'STYLIST'        => QDPalette.primary50,
+    'RECEPTIONIST'   => QDPalette.infoBg,
+    'STAFF'          => QDPalette.warningBg,
+    'ASSISTANT'      => QDPalette.neutral50,
+    'BUSINESS_OWNER' => QDPalette.successBg,
+    'DOCTOR'         => QDPalette.errorBg,
+    _                => QDPalette.neutral50,
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('Staff')),
       floatingActionButton: FloatingActionButton(
         onPressed: _tenantId != null ? _showAddSheet : null,
-        backgroundColor: QDColors.primary,
-        child: const Icon(Icons.person_add_outlined, color: Colors.white),
+        child: const Icon(Icons.person_add_rounded),
       ),
       body: _loading
           ? const QDLoading()
@@ -87,49 +99,65 @@ class _StaffScreenState extends State<StaffScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
+                      color: QDPalette.primary500,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(QDSpace.screenPad),
                         itemCount: _staff!.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: QDSpace.cardGap),
                         itemBuilder: (_, i) {
                           final s = _staff![i];
-                          final color = _roleColors[s.roleCode] ?? QDColors.textSecondary;
+                          final color = _roleColor(s.roleCode);
+                          final bg = _roleBg(s.roleCode);
                           return Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(QDSpace.cardPad),
                             decoration: BoxDecoration(
-                              color: QDColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: QDColors.border),
+                              color: QDPalette.surfaceCard,
+                              borderRadius:
+                                  BorderRadius.circular(QDRadius.card),
+                              border: Border.all(color: QDPalette.neutral100),
+                              boxShadow: QDShadow.card,
                             ),
                             child: Row(
                               children: [
-                                CircleAvatar(
-                                  backgroundColor: color.withValues(alpha: 0.15),
-                                  child: Text(s.initials,
-                                      style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-                                ),
+                                QDAvatar(name: s.fullName, size: 44),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(s.fullName,
-                                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      Text(s.mobileNumber ?? s.email ?? '',
                                           style: const TextStyle(
-                                              color: QDColors.textSecondary, fontSize: 13)),
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                              color: QDPalette.neutral800)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                          s.mobileNumber ?? s.email ?? '',
+                                          style: const TextStyle(
+                                              color: QDPalette.neutral500,
+                                              fontSize: 13)),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: bg,
+                                    borderRadius: BorderRadius.circular(
+                                        QDRadius.full),
                                   ),
-                                  child: Text(s.roleName.isNotEmpty ? s.roleName : s.roleCode,
-                                      style: TextStyle(
-                                          fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+                                  child: Text(
+                                    s.roleName.isNotEmpty
+                                        ? s.roleName
+                                        : s.roleCode,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: color,
+                                        fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ],
                             ),
@@ -145,7 +173,8 @@ class _AddStaffSheet extends StatefulWidget {
   final int tenantId;
   final BusinessRepository repo;
   final VoidCallback onSaved;
-  const _AddStaffSheet({required this.tenantId, required this.repo, required this.onSaved});
+  const _AddStaffSheet(
+      {required this.tenantId, required this.repo, required this.onSaved});
 
   @override
   State<_AddStaffSheet> createState() => _AddStaffSheetState();
@@ -159,7 +188,9 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   String _role = 'STYLIST';
   bool _loading = false;
 
-  static const _roles = ['STYLIST', 'RECEPTIONIST', 'STAFF', 'ASSISTANT', 'DOCTOR'];
+  static const _roles = [
+    'STYLIST', 'RECEPTIONIST', 'STAFF', 'ASSISTANT', 'DOCTOR'
+  ];
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -177,7 +208,8 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: QDColors.error),
+          SnackBar(content: Text(e.toString()),
+              backgroundColor: QDPalette.error500),
         );
         setState(() => _loading = false);
       }
@@ -187,29 +219,38 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          QDSpace.screenPad, QDSpace.x5, QDSpace.screenPad,
+          MediaQuery.of(context).viewInsets.bottom + QDSpace.x5),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Staff Member', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 20),
+            const Text('Add Staff Member',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                    color: QDPalette.neutral900)),
+            const SizedBox(height: QDSpace.x5),
             _field(_name, 'Full Name', required: true),
-            _field(_email, 'Email', keyboardType: TextInputType.emailAddress, required: true),
-            _field(_mobile, 'Mobile Number', keyboardType: TextInputType.phone),
+            _field(_email, 'Email',
+                keyboardType: TextInputType.emailAddress, required: true),
+            _field(_mobile, 'Mobile Number',
+                keyboardType: TextInputType.phone),
             DropdownButtonFormField<String>(
               initialValue: _role,
-              decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
-              items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              decoration: const InputDecoration(labelText: 'Role'),
+              items: _roles
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
               onChanged: (v) => setState(() => _role = v ?? _role),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: QDSpace.x2),
             const Text('Default password: Welcome@123',
-                style: TextStyle(fontSize: 12, color: QDColors.textSecondary)),
-            const SizedBox(height: 20),
-            QDButton(label: 'Add Staff', isLoading: _loading, onPressed: _save),
+                style: TextStyle(fontSize: 12, color: QDPalette.neutral400)),
+            const SizedBox(height: QDSpace.x5),
+            QDButton(
+                label: 'Add Staff', isLoading: _loading, onPressed: _save),
           ],
         ),
       ),
@@ -219,15 +260,22 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   Widget _field(TextEditingController c, String label,
       {TextInputType? keyboardType, bool required = false}) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: QDSpace.x3),
         child: TextFormField(
           controller: c,
           keyboardType: keyboardType,
-          decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-          validator: required ? (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null : null,
+          decoration: InputDecoration(labelText: label),
+          validator: required
+              ? (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null
+              : null,
         ),
       );
 
   @override
-  void dispose() { _name.dispose(); _email.dispose(); _mobile.dispose(); super.dispose(); }
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _mobile.dispose();
+    super.dispose();
+  }
 }

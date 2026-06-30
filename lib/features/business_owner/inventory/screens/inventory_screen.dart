@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/widgets/qd_empty_state.dart';
 import '../../../../core/widgets/qd_error.dart';
@@ -46,7 +46,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(title: const Text('Inventory')),
       body: _loading
           ? const QDLoading()
@@ -60,10 +60,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
+                      color: QDPalette.primary500,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(QDSpace.screenPad),
                         itemCount: _items!.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: QDSpace.cardGap),
                         itemBuilder: (_, i) => _ItemCard(item: _items![i]),
                       ),
                     ),
@@ -80,43 +82,64 @@ class _ItemCard extends StatelessWidget {
     final qty = (item['quantity'] as num?)?.toInt() ?? 0;
     final reorder = (item['reorderLevel'] as num?)?.toInt() ?? 0;
     final isLow = qty <= reorder;
+    final color = isLow ? QDPalette.warning500 : QDPalette.primary500;
+    final bg = isLow ? QDPalette.warningBg : QDPalette.primary50;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isLow ? QDColors.warning : QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(
+            color: isLow ? QDPalette.warning500.withValues(alpha: 0.4) : QDPalette.neutral100),
+        boxShadow: QDShadow.card,
       ),
       child: Row(
         children: [
           Container(
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: (isLow ? QDColors.warning : QDColors.primary).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: bg,
+              borderRadius: BorderRadius.circular(QDRadius.iconChip),
             ),
-            child: Icon(Icons.inventory_2_outlined,
-                color: isLow ? QDColors.warning : QDColors.primary),
+            child: Icon(Icons.inventory_2_outlined, color: color, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['itemName'] as String? ?? item['name'] as String? ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text('${item['unit'] ?? ''} · Reorder at $reorder',
-                    style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                Text(
+                  item['itemName'] as String? ?? item['name'] as String? ?? '',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: QDPalette.neutral800),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${item['unit'] ?? ''} · Reorder at $reorder',
+                  style: const TextStyle(
+                      color: QDPalette.neutral500, fontSize: 13),
+                ),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('$qty', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+              Text('$qty',
+                  style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: QDPalette.neutral900,
+                      letterSpacing: -0.5)),
               if (isLow)
-                const Text('LOW', style: TextStyle(
-                    color: QDColors.warning, fontSize: 11, fontWeight: FontWeight.w700)),
+                const Text('LOW',
+                    style: TextStyle(
+                        color: QDPalette.warning500,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
             ],
           ),
         ],

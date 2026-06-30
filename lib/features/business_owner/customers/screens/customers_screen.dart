@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/customer_model.dart';
 import '../../../../core/widgets/qd_empty_state.dart';
@@ -56,12 +57,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Customers'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline_rounded),
             onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
@@ -70,42 +71,48 @@ class _CustomersScreenState extends State<CustomersScreen> {
         children: [
           // Search bar
           Container(
-            color: QDColors.surface,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            color: QDPalette.surfaceCard,
+            padding: const EdgeInsets.fromLTRB(
+                QDSpace.screenPad, 8, QDSpace.screenPad, 12),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'Search customers...',
-                prefixIcon: const Icon(Icons.search, size: 20),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
+                        icon: const Icon(Icons.clear_rounded, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
                           _load();
                         },
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               onSubmitted: (v) => _load(search: v.trim()),
               onChanged: (v) {
+                setState(() {});
                 if (v.isEmpty) _load();
               },
               textInputAction: TextInputAction.search,
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          Container(
+            color: QDPalette.surfaceCard,
+            padding: const EdgeInsets.symmetric(
+                horizontal: QDSpace.screenPad, vertical: 8),
             child: Row(
               children: [
                 Text('${_items.length} customers',
-                    style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                    style: const TextStyle(
+                        color: QDPalette.neutral400, fontSize: 13)),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Container(height: 1, color: QDPalette.neutral100),
+
           Expanded(
             child: _isLoading
                 ? const QDLoading()
@@ -114,15 +121,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     : _items.isEmpty
                         ? const QDEmptyState(
                             title: 'No customers yet',
-                            subtitle: 'Customers will appear here once you start adding them.',
-                            icon: Icons.people_outline,
+                            subtitle:
+                                'Customers will appear here once you start adding them.',
+                            icon: Icons.people_outline_rounded,
                           )
                         : RefreshIndicator(
                             onRefresh: _load,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.all(12),
+                            color: QDPalette.primary500,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(QDSpace.screenPad),
                               itemCount: _items.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
                               itemBuilder: (_, i) => _card(_items[i]),
                             ),
                           ),
@@ -134,44 +142,43 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   Widget _card(CustomerModel c) {
     return GestureDetector(
-      onTap: () => context.push('/business/customers/${c.personId}'),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        context.push('/business/customers/${c.personId}');
+      },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: QDSpace.x2),
+        padding: const EdgeInsets.all(QDSpace.cardPad),
         decoration: BoxDecoration(
-          color: QDColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: QDColors.border),
+          color: QDPalette.surfaceCard,
+          borderRadius: BorderRadius.circular(QDRadius.card),
+          border: Border.all(color: QDPalette.neutral100),
+          boxShadow: QDShadow.card,
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: QDColors.primary.withValues(alpha: 0.1),
-              child: Text(
-                c.initials,
-                style: const TextStyle(
-                  color: QDColors.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ),
+            QDAvatar(name: c.fullName, size: 44),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(c.fullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: QDPalette.neutral800)),
                   const SizedBox(height: 2),
                   if (c.mobileNumber != null)
                     Text(c.mobileNumber!,
-                        style: const TextStyle(color: QDColors.textSecondary, fontSize: 13)),
+                        style: const TextStyle(
+                            color: QDPalette.neutral500, fontSize: 13)),
                   if (c.lastVisitDate != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       'Last visit: ${c.lastVisitDate!.day}/${c.lastVisitDate!.month}/${c.lastVisitDate!.year}',
-                      style: const TextStyle(color: QDColors.textHint, fontSize: 12),
+                      style: const TextStyle(
+                          color: QDPalette.neutral400, fontSize: 12),
                     ),
                   ],
                 ],
@@ -184,17 +191,23 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   Text(
                     '${c.totalVisits} visits',
                     style: const TextStyle(
-                        color: QDColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                        color: QDPalette.primary600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 if (c.totalSpent != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     '₹${c.totalSpent!.toStringAsFixed(0)}',
                     style: const TextStyle(
-                        color: QDColors.success, fontSize: 13, fontWeight: FontWeight.w600),
+                        color: QDPalette.success500,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
-                const Icon(Icons.chevron_right, color: QDColors.textHint, size: 18),
+                const SizedBox(height: 2),
+                const Icon(Icons.chevron_right_rounded,
+                    color: QDPalette.neutral300, size: 18),
               ],
             ),
           ],

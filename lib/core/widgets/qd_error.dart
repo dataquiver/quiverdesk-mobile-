@@ -1,5 +1,5 @@
-﻿import 'package:flutter/material.dart';
-import '../../app/themes.dart';
+import 'package:flutter/material.dart';
+import '../../app/design_system/design_system.dart';
 import 'qd_button.dart';
 
 class QDError extends StatelessWidget {
@@ -12,7 +12,7 @@ class QDError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -20,29 +20,35 @@ class QDError extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: QDColors.errorLight,
-                borderRadius: BorderRadius.circular(36),
+                color: QDPalette.errorBg,
+                borderRadius: BorderRadius.circular(QDRadius.full),
               ),
-              child: const Icon(Icons.error_outline_rounded, color: QDColors.error, size: 36),
+              child: const Icon(Icons.error_outline_rounded, color: QDPalette.error500, size: 34),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             const Text(
               'Something went wrong',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: QDColors.textPrimary,
+                color: QDPalette.neutral800,
+                letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: QDColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: QDPalette.neutral400,
+                height: 1.5,
+              ),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              QDButton(label: 'Try Again', onPressed: onRetry, icon: Icons.refresh),
+              const SizedBox(height: 28),
+              QDButton(label: 'Try Again', onPressed: onRetry, icon: Icons.refresh_rounded),
             ],
           ],
         ),

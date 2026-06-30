@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/themes.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/invoice_model.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -28,7 +28,6 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
 
   static const _statuses = ['ALL', 'UNPAID', 'PARTIAL', 'PAID'];
 
-  // Summary metrics
   double get _totalRevenue => _items.fold(0, (s, i) => s + i.totalAmount);
   double get _totalPaid => _items.fold(0, (s, i) => s + i.paidAmount);
   double get _totalPending => _items.fold(0, (s, i) => s + i.balance);
@@ -61,21 +60,28 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
   }
 
   Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'PAID' => QDColors.success,
-    'UNPAID' => QDColors.error,
-    'PARTIAL' => QDColors.warning,
-    _ => QDColors.textHint,
+    'PAID'    => QDPalette.success500,
+    'UNPAID'  => QDPalette.error500,
+    'PARTIAL' => QDPalette.warning500,
+    _         => QDPalette.neutral400,
+  };
+
+  Color _statusBg(String s) => switch (s.toUpperCase()) {
+    'PAID'    => QDPalette.successBg,
+    'UNPAID'  => QDPalette.errorBg,
+    'PARTIAL' => QDPalette.warningBg,
+    _         => QDPalette.neutral50,
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: QDColors.background,
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Billing'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline_rounded),
             onPressed: () => context.push(AppRoutes.profile),
           ),
         ],
@@ -86,32 +92,41 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
               ? QDError(message: _error!, onRetry: _load)
               : Column(
                   children: [
-                    // Summary cards
+                    // Summary metrics
                     Container(
-                      color: QDColors.surface,
-                      padding: const EdgeInsets.all(16),
+                      color: QDPalette.surfaceCard,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: QDSpace.screenPad, vertical: 14),
                       child: Row(
                         children: [
-                          _metric('Total', QDCurrency.compact(_totalRevenue), QDColors.textPrimary),
-                          _divider(),
-                          _metric('Collected', QDCurrency.compact(_totalPaid), QDColors.success),
-                          _divider(),
-                          _metric('Pending', QDCurrency.compact(_totalPending), QDColors.error),
-                          _divider(),
-                          _metric('Unpaid\nCount', '$_unpaidCount', QDColors.warning),
+                          _metric('Total',
+                              QDCurrency.compact(_totalRevenue),
+                              QDPalette.neutral800),
+                          _vDivider(),
+                          _metric('Collected',
+                              QDCurrency.compact(_totalPaid),
+                              QDPalette.success500),
+                          _vDivider(),
+                          _metric('Pending',
+                              QDCurrency.compact(_totalPending),
+                              QDPalette.error500),
+                          _vDivider(),
+                          _metric('Unpaid\nCount', '$_unpaidCount',
+                              QDPalette.warning500),
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
+                    Container(height: 1, color: QDPalette.neutral100),
 
                     // Filter chips
                     SizedBox(
-                      height: 44,
+                      height: 46,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: QDSpace.screenPad, vertical: 7),
                         itemCount: _statuses.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
                         itemBuilder: (_, i) {
                           final s = _statuses[i];
                           final selected = s == _selectedStatus;
@@ -122,32 +137,41 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
                               setState(() => _selectedStatus = s);
                               _load();
                             },
-                            selectedColor: QDColors.primaryLight,
+                            selectedColor: QDPalette.primary100,
+                            checkmarkColor: QDPalette.primary600,
                             labelStyle: TextStyle(
-                              color: selected ? QDColors.primary : QDColors.textSecondary,
+                              color: selected
+                                  ? QDPalette.primary600
+                                  : QDPalette.neutral500,
                               fontSize: 12,
-                              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 4),
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                           );
                         },
                       ),
                     ),
-                    const Divider(height: 1),
+                    Container(height: 1, color: QDPalette.neutral100),
 
                     // List
                     Expanded(
                       child: _items.isEmpty
                           ? const QDEmptyState(
                               title: 'No invoices',
-                              subtitle: 'Invoices will appear here after appointments are completed.',
+                              subtitle:
+                                  'Invoices will appear here after appointments are completed.',
                               icon: Icons.receipt_long_outlined,
                             )
                           : RefreshIndicator(
                               onRefresh: _load,
+                              color: QDPalette.primary500,
                               child: ListView.builder(
-                                padding: const EdgeInsets.all(12),
+                                padding:
+                                    const EdgeInsets.all(QDSpace.screenPad),
                                 itemCount: _items.length,
                                 itemBuilder: (_, i) => _card(_items[i]),
                               ),
@@ -160,13 +184,15 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
 
   Widget _card(InvoiceModel inv) {
     final sc = _statusColor(inv.status);
+    final bg = _statusBg(inv.status);
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: QDSpace.x2),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
       decoration: BoxDecoration(
-        color: QDColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QDColors.border),
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
       ),
       child: Row(
         children: [
@@ -174,8 +200,8 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: sc.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: bg,
+              borderRadius: BorderRadius.circular(QDRadius.iconChip),
             ),
             child: Icon(Icons.receipt_outlined, color: sc, size: 22),
           ),
@@ -185,11 +211,15 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(inv.customerName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: QDPalette.neutral800)),
                 const SizedBox(height: 2),
                 Text(
                   '#${inv.invoiceId} · ${QDDateUtils.formatDate(inv.invoiceDate)}',
-                  style: const TextStyle(color: QDColors.textHint, fontSize: 12),
+                  style: const TextStyle(
+                      color: QDPalette.neutral400, fontSize: 12),
                 ),
               ],
             ),
@@ -198,17 +228,13 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(QDCurrency.format(inv.totalAmount),
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: QDColors.textPrimary)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: QDPalette.neutral900,
+                      letterSpacing: -0.3)),
               const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: sc.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(inv.status,
-                    style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w600)),
-              ),
+              QDStatusChip.fromStatus(inv.status),
             ],
           ),
         ],
@@ -221,19 +247,25 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
       child: Column(
         children: [
           Text(value,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700, color: color),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
           Text(label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: QDColors.textSecondary, height: 1.2)),
+              style: const TextStyle(
+                  fontSize: 10, color: QDPalette.neutral400, height: 1.2)),
         ],
       ),
     );
   }
 
-  Widget _divider() {
-    return Container(width: 1, height: 36, color: QDColors.divider, margin: const EdgeInsets.symmetric(horizontal: 4));
+  Widget _vDivider() {
+    return Container(
+        width: 1,
+        height: 36,
+        color: QDPalette.neutral100,
+        margin: const EdgeInsets.symmetric(horizontal: 4));
   }
 }

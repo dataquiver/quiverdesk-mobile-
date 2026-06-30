@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/models/platform_models.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/widgets/qd_loading.dart';
@@ -16,7 +17,8 @@ class PlatformReportsScreen extends StatefulWidget {
   State<PlatformReportsScreen> createState() => _PlatformReportsScreenState();
 }
 
-class _PlatformReportsScreenState extends State<PlatformReportsScreen> with SingleTickerProviderStateMixin {
+class _PlatformReportsScreenState extends State<PlatformReportsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _repo = PlatformRepository();
 
@@ -74,6 +76,7 @@ class _PlatformReportsScreenState extends State<PlatformReportsScreen> with Sing
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: QDPalette.surfaceBackground,
       appBar: AppBar(
         title: const Text('Platform Reports'),
         bottom: TabBar(
@@ -108,6 +111,13 @@ class _PlatformReportsScreenState extends State<PlatformReportsScreen> with Sing
   }
 }
 
+BoxDecoration get _cardDecor => BoxDecoration(
+      color: QDPalette.surfaceCard,
+      borderRadius: BorderRadius.circular(QDRadius.card),
+      border: Border.all(color: QDPalette.neutral100),
+      boxShadow: QDShadow.card,
+    );
+
 // ── Growth tab ─────────────────────────────────────────────────────────────
 class _GrowthTab extends StatelessWidget {
   final List<BusinessGrowthItem> items;
@@ -115,26 +125,31 @@ class _GrowthTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const QDEmptyState(title: 'No Data', subtitle: 'No growth data available.');
+    if (items.isEmpty) {
+      return const QDEmptyState(title: 'No Data', subtitle: 'No growth data available.');
+    }
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.screenPad),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: QDSpace.x2),
       itemBuilder: (_, i) {
         final item = items[i];
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Expanded(child: Text(item.month, style: const TextStyle(fontWeight: FontWeight.w600))),
-                _Stat(label: 'New', value: '${item.newBusinesses}', color: Colors.green),
-                const SizedBox(width: 16),
-                _Stat(label: 'Total', value: '${item.totalBusinesses}', color: Colors.blue),
-                const SizedBox(width: 16),
-                _Stat(label: 'Churned', value: '${item.churnedBusinesses}', color: Colors.red),
-              ],
-            ),
+        return Container(
+          padding: const EdgeInsets.all(QDSpace.cardPad),
+          decoration: _cardDecor,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(item.month,
+                    style: const TextStyle(fontWeight: FontWeight.w600,
+                        color: QDPalette.neutral800)),
+              ),
+              _Stat(label: 'New', value: '${item.newBusinesses}', color: QDPalette.success500),
+              const SizedBox(width: 16),
+              _Stat(label: 'Total', value: '${item.totalBusinesses}', color: QDPalette.primary500),
+              const SizedBox(width: 16),
+              _Stat(label: 'Churned', value: '${item.churnedBusinesses}', color: QDPalette.error500),
+            ],
           ),
         );
       },
@@ -149,22 +164,32 @@ class _RevenueTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const QDEmptyState(title: 'No Data', subtitle: 'No revenue data available.');
+    if (items.isEmpty) {
+      return const QDEmptyState(title: 'No Data', subtitle: 'No revenue data available.');
+    }
     final total = items.fold(0.0, (s, e) => s + e.revenue);
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(QDSpace.screenPad),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          decoration: BoxDecoration(
+            color: QDPalette.primary50,
+            borderRadius: BorderRadius.circular(QDRadius.card),
+            border: Border.all(color: QDPalette.primary100),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Column(
                 children: [
-                  const Text('Total Revenue', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('Total Revenue',
+                      style: TextStyle(fontSize: 12, color: QDPalette.primary600,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 4),
                   Text(QDCurrency.format(total),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700,
+                          color: QDPalette.primary700, letterSpacing: -0.5)),
                 ],
               ),
             ],
@@ -172,24 +197,30 @@ class _RevenueTab extends StatelessWidget {
         ),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: QDSpace.screenPad),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, __) => const SizedBox(height: QDSpace.x2),
             itemBuilder: (_, i) {
               final item = items[i];
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(item.month, style: const TextStyle(fontWeight: FontWeight.w600))),
-                      _Stat(label: 'Total', value: QDCurrency.format(item.revenue), color: Colors.blue),
-                      const SizedBox(width: 12),
-                      _Stat(label: 'New', value: QDCurrency.format(item.newRevenue), color: Colors.green),
-                      const SizedBox(width: 12),
-                      _Stat(label: 'Renewal', value: QDCurrency.format(item.renewalRevenue), color: Colors.orange),
-                    ],
-                  ),
+              return Container(
+                padding: const EdgeInsets.all(QDSpace.cardPad),
+                decoration: _cardDecor,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(item.month,
+                          style: const TextStyle(fontWeight: FontWeight.w600,
+                              color: QDPalette.neutral800)),
+                    ),
+                    _Stat(label: 'Total', value: QDCurrency.format(item.revenue),
+                        color: QDPalette.primary500),
+                    const SizedBox(width: 12),
+                    _Stat(label: 'New', value: QDCurrency.format(item.newRevenue),
+                        color: QDPalette.success500),
+                    const SizedBox(width: 12),
+                    _Stat(label: 'Renewal', value: QDCurrency.format(item.renewalRevenue),
+                        color: QDPalette.warning500),
+                  ],
                 ),
               );
             },
@@ -207,36 +238,42 @@ class _PlansTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const QDEmptyState(title: 'No Data', subtitle: 'No plan data available.');
+    if (items.isEmpty) {
+      return const QDEmptyState(title: 'No Data', subtitle: 'No plan data available.');
+    }
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.screenPad),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: QDSpace.x2),
       itemBuilder: (_, i) {
         final item = items[i];
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(item.planName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('${item.subscriberCount} subscribers', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _Stat(label: 'Monthly', value: QDCurrency.format(item.monthlyRevenue), color: Colors.blue),
-                    const SizedBox(width: 24),
-                    _Stat(label: 'Annual', value: QDCurrency.format(item.annualRevenue), color: Colors.green),
-                  ],
-                ),
-              ],
-            ),
+        return Container(
+          padding: const EdgeInsets.all(QDSpace.cardPad),
+          decoration: _cardDecor,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(item.planName,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15,
+                          color: QDPalette.neutral900)),
+                  Text('${item.subscriberCount} subscribers',
+                      style: const TextStyle(fontSize: 12, color: QDPalette.neutral400)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _Stat(label: 'Monthly', value: QDCurrency.format(item.monthlyRevenue),
+                      color: QDPalette.primary500),
+                  const SizedBox(width: 24),
+                  _Stat(label: 'Annual', value: QDCurrency.format(item.annualRevenue),
+                      color: QDPalette.success500),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -251,32 +288,64 @@ class _TrialsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const QDEmptyState(title: 'No Expiring Trials', subtitle: 'No trials expiring soon.');
+    if (items.isEmpty) {
+      return const QDEmptyState(
+          title: 'No Expiring Trials', subtitle: 'No trials expiring soon.');
+    }
     final fmt = DateFormat('dd MMM yyyy');
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.screenPad),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: QDSpace.x2),
       itemBuilder: (_, i) {
         final item = items[i];
         final urgent = item.daysLeft <= 7;
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: urgent ? Colors.red.shade100 : Colors.orange.shade100,
-              child: Text('${item.daysLeft}d',
-                  style: TextStyle(fontSize: 12, color: urgent ? Colors.red : Colors.orange, fontWeight: FontWeight.bold)),
-            ),
-            title: Text(item.businessName, style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(item.ownerName),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('Expires', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                Text(fmt.format(item.trialExpiryDate), style: const TextStyle(fontSize: 12)),
-              ],
-            ),
+        final chipColor = urgent ? QDPalette.error500 : QDPalette.warning500;
+        final chipBg = urgent ? QDPalette.errorBg : QDPalette.warningBg;
+        return Container(
+          padding: const EdgeInsets.all(QDSpace.cardPad),
+          decoration: _cardDecor,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: chipBg,
+                  borderRadius: BorderRadius.circular(QDRadius.iconChip),
+                ),
+                child: Center(
+                  child: Text('${item.daysLeft}d',
+                      style: TextStyle(fontSize: 13, color: chipColor,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.businessName,
+                        style: const TextStyle(fontWeight: FontWeight.w600,
+                            fontSize: 14, color: QDPalette.neutral800)),
+                    const SizedBox(height: 2),
+                    Text(item.ownerName,
+                        style: const TextStyle(fontSize: 12, color: QDPalette.neutral500)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text('Expires',
+                      style: TextStyle(fontSize: 10, color: QDPalette.neutral400)),
+                  const SizedBox(height: 2),
+                  Text(fmt.format(item.trialExpiryDate),
+                      style: const TextStyle(fontSize: 12, color: QDPalette.neutral700,
+                          fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -291,32 +360,61 @@ class _RenewalsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const QDEmptyState(title: 'No Upcoming Renewals', subtitle: 'No renewals due soon.');
+    if (items.isEmpty) {
+      return const QDEmptyState(
+          title: 'No Upcoming Renewals', subtitle: 'No renewals due soon.');
+    }
     final fmt = DateFormat('dd MMM yyyy');
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(QDSpace.screenPad),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: QDSpace.x2),
       itemBuilder: (_, i) {
         final item = items[i];
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue.shade50,
-              child: Text('${item.daysUntilRenewal}d',
-                  style: TextStyle(fontSize: 12, color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
-            ),
-            title: Text(item.businessName, style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(item.planName),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(QDCurrency.format(item.amount),
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(fmt.format(item.renewalDate), style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              ],
-            ),
+        return Container(
+          padding: const EdgeInsets.all(QDSpace.cardPad),
+          decoration: _cardDecor,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: QDPalette.primary50,
+                  borderRadius: BorderRadius.circular(QDRadius.iconChip),
+                ),
+                child: Center(
+                  child: Text('${item.daysUntilRenewal}d',
+                      style: const TextStyle(fontSize: 13, color: QDPalette.primary600,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.businessName,
+                        style: const TextStyle(fontWeight: FontWeight.w600,
+                            fontSize: 14, color: QDPalette.neutral800)),
+                    const SizedBox(height: 2),
+                    Text(item.planName,
+                        style: const TextStyle(fontSize: 12, color: QDPalette.neutral500)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(QDCurrency.format(item.amount),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15,
+                          color: QDPalette.neutral900, letterSpacing: -0.3)),
+                  const SizedBox(height: 2),
+                  Text(fmt.format(item.renewalDate),
+                      style: const TextStyle(fontSize: 11, color: QDPalette.neutral400)),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -335,8 +433,12 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+        Text(label,
+            style: const TextStyle(fontSize: 10, color: QDPalette.neutral400,
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 2),
+        Text(value,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
       ],
     );
   }
