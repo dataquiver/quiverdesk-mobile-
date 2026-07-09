@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/themes.dart';
@@ -47,20 +48,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     setState(() { _loading = true; _error = null; });
+    // Field names must match OnboardBusinessRequest on the backend.
+    final nameParts = _ownerName.text.trim().split(RegExp(r'\s+'));
     try {
       await ApiClient.instance.post(ApiEndpoints.onboardBusiness, data: {
         'businessName': _businessName.text.trim(),
         'businessCode': _businessCode.text.trim(),
-        'ownerName': _ownerName.text.trim(),
+        'businessCategory': _category,
+        'email': _email.text.trim(),
+        'phoneNumber': _phone.text.trim(),
+        'ownerFirstName': nameParts.first,
+        'ownerLastName': nameParts.length > 1 ? nameParts.sublist(1).join(' ') : null,
         'ownerEmail': _email.text.trim(),
-        'ownerMobile': _ownerMobile.text.trim(),
+        'ownerMobileNumber': _ownerMobile.text.trim(),
         'password': _password.text,
         'city': _city.text.trim(),
-        'businessCategory': _category,
       });
       if (mounted) setState(() { _step = 2; _loading = false; });
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response!.data['message'] as String? ?? 'Registration failed. Please try again.')
+          : 'Could not reach the server. Check your connection.';
+      if (mounted) setState(() { _error = message; _loading = false; });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) setState(() { _error = 'Registration failed. Please try again.'; _loading = false; });
     }
   }
 
