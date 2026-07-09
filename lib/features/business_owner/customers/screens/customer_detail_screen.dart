@@ -42,25 +42,96 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     if (_tenantId == null) return;
     setState(() { _isLoading = true; _error = null; });
     try {
-      final results = await Future.wait([
-        _repo.getCustomerDetail(_tenantId!, widget.customerId),
-        _repo.getCustomerAppointments(_tenantId!, widget.customerId),
-      ]);
+      final customer = await _repo.getCustomerDetail(_tenantId!, widget.customerId);
+      // History failing must not take down the whole profile.
+      List<AppointmentModel> appointments = [];
+      try {
+        appointments = await _repo.getCustomerAppointments(_tenantId!, widget.customerId);
+      } catch (_) {}
       if (mounted) {
         setState(() {
-          _customer = results[0] as CustomerModel;
-          _appointments = results[1] as List<AppointmentModel>;
+          _customer = customer;
+          _appointments = appointments;
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _error = 'Could not load this customer. Pull to retry.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _call(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
     if (await canLaunchUrl(uri)) launchUrl(uri);
+  }
+
+  void _sms(String phone) async {
+    final uri = Uri(scheme: 'sms', path: phone);
+    if (await canLaunchUrl(uri)) launchUrl(uri);
+  }
+
+  void _whatsApp(String phone, {String? message}) async {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 10) digits = '91$digits';
+    final uri = Uri.parse(
+        'https://wa.me/$digits${message != null ? '?text=${Uri.encodeComponent(message)}' : ''}');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Widget _contactActions(CustomerModel c) {
+    if (c.mobileNumber == null || c.mobileNumber!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final phone = c.mobileNumber!;
+    Widget action(IconData icon, String label, Color color, VoidCallback onTap) {
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(QDRadius.card),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: QDPalette.surfaceCard,
+              borderRadius: BorderRadius.circular(QDRadius.card),
+              border: Border.all(color: QDPalette.neutral100),
+              boxShadow: QDShadow.card,
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(height: 4),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: QDPalette.neutral700)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          QDSpace.screenPad, QDSpace.x3, QDSpace.screenPad, 0),
+      child: Row(
+        children: [
+          action(Icons.call_rounded, 'Call', QDPalette.success500,
+              () => _call(phone)),
+          action(Icons.chat_rounded, 'WhatsApp', const Color(0xFF25D366),
+              () => _whatsApp(phone, message: 'Hi ${c.fullName}! ')),
+          action(Icons.sms_outlined, 'SMS', QDPalette.info500,
+              () => _sms(phone)),
+        ],
+      ),
+    );
   }
 
   @override
@@ -145,6 +216,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           ),
         ),
         Container(height: 1, color: QDPalette.neutral100),
+
+        // Quick contact actions
+        _contactActions(c),
 
         // Info section
         if (c.email != null || c.gender != null || c.dateOfBirth != null || c.notes != null)

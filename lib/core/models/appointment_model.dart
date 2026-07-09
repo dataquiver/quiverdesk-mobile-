@@ -32,12 +32,21 @@ class AppointmentModel extends Equatable {
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
-    // Extract first service name from services array (API field) or fall back to serviceName
-    final services = json['services'] as List<dynamic>?;
-    final firstService = services?.isNotEmpty == true ? services!.first as Map<String, dynamic>? : null;
-    final svcName = json['serviceName'] as String?
-        ?? firstService?['serviceName'] as String?
-        ?? '';
+    // 'services' varies by endpoint: a list of maps (appointment list/detail),
+    // a plain string (dashboard recentAppointments), or absent. Never cast blindly.
+    final rawServices = json['services'];
+    String? svcFromServices;
+    if (rawServices is List && rawServices.isNotEmpty) {
+      final first = rawServices.first;
+      if (first is Map<String, dynamic>) {
+        svcFromServices = first['serviceName'] as String?;
+      } else if (first is String) {
+        svcFromServices = first;
+      }
+    } else if (rawServices is String && rawServices.isNotEmpty) {
+      svcFromServices = rawServices;
+    }
+    final svcName = json['serviceName'] as String? ?? svcFromServices ?? '';
     return AppointmentModel(
       appointmentId: json['appointmentId'] as int,
       customerName: json['customerName'] as String? ?? '',

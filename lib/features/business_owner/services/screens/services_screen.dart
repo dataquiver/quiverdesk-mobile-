@@ -20,6 +20,7 @@ class ServicesScreen extends StatefulWidget {
 class _ServicesScreenState extends State<ServicesScreen> {
   final _repo = BusinessRepository();
   List<ServiceModel>? _services;
+  List<String> _categories = const ['CONSULTATION', 'SERVICE', 'PACKAGE', 'OTHER'];
   bool _loading = true;
   String? _error;
   int? _tenantId;
@@ -33,7 +34,18 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Future<void> _init() async {
     final id = await TokenStorage.getBusinessId();
     _tenantId = id != null ? int.tryParse(id) : null;
+    _loadCategories();
     await _load();
+  }
+
+  Future<void> _loadCategories() async {
+    if (_tenantId == null) return;
+    try {
+      final cats = await _repo.getServiceCategories(_tenantId!);
+      if (mounted && cats.isNotEmpty) setState(() => _categories = cats);
+    } catch (_) {
+      // keep the generic fallback list
+    }
   }
 
   Future<void> _load() async {
@@ -59,6 +71,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         tenantId: _tenantId!,
         repo: _repo,
         onSaved: _load,
+        categories: _categories,
         editService: service,
       ),
     );
@@ -107,6 +120,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         tenantId: _tenantId!,
         repo: _repo,
         onSaved: _load,
+        categories: _categories,
       ),
     );
   }
@@ -254,9 +268,11 @@ class _AddServiceSheet extends StatefulWidget {
   final int tenantId;
   final BusinessRepository repo;
   final VoidCallback onSaved;
+  final List<String> categories;
   final ServiceModel? editService;
   const _AddServiceSheet(
-      {required this.tenantId, required this.repo, required this.onSaved, this.editService});
+      {required this.tenantId, required this.repo, required this.onSaved,
+       required this.categories, this.editService});
 
   @override
   State<_AddServiceSheet> createState() => _AddServiceSheetState();
@@ -269,14 +285,20 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
       text: widget.editService != null ? widget.editService!.price.toStringAsFixed(0) : '');
   late final _duration = TextEditingController(
       text: widget.editService != null ? '${widget.editService!.durationMinutes}' : '30');
-  late String _category = widget.editService?.category ?? 'HAIR';
+  // Business-type-specific options come from the API; keep an existing service's
+  // category selectable even if it isn't in the current list.
+  late final List<String> _categories = {
+    ...widget.categories,
+    if (widget.editService?.category != null &&
+        widget.editService!.category!.isNotEmpty)
+      widget.editService!.category!,
+  }.toList();
+  late String _category = widget.editService?.category?.isNotEmpty == true
+      ? widget.editService!.category!
+      : _categories.first;
   bool _loading = false;
 
   bool get _isEdit => widget.editService != null;
-
-  static const _categories = [
-    'HAIR', 'SKIN', 'NAIL', 'MASSAGE', 'DENTAL', 'GENERAL'
-  ];
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;

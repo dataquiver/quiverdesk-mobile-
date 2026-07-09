@@ -173,6 +173,11 @@ class BusinessRepository {
     return _toList(body).cast<Map<String, dynamic>>();
   }
 
+  Future<List<String>> getServiceCategories(int tenantId) async {
+    final res = await _dio.get('${ApiEndpoints.services(tenantId)}/categories');
+    return _toList(_anyData(res)).cast<String>();
+  }
+
   Future<Map<String, dynamic>?> getSubscription(int tenantId) async {
     try {
       final res = await _dio.get(ApiEndpoints.subscription(tenantId));

@@ -94,6 +94,51 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     if (await canLaunchUrl(uri)) launchUrl(uri);
   }
 
+  void _sms(String phone) async {
+    final uri = Uri(scheme: 'sms', path: phone);
+    if (await canLaunchUrl(uri)) launchUrl(uri);
+  }
+
+  void _whatsApp(String phone) async {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 10) digits = '91$digits';
+    final a = _data;
+    final message = a == null
+        ? ''
+        : 'Hi ${a.customerName}, regarding your ${a.serviceName} appointment on '
+          '${QDDateUtils.formatDate(a.appointmentDate)} at ${QDDateUtils.formatTime(a.startTime)}: ';
+    await launchUrl(
+      Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent(message)}'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Widget _contactRow(String phone) {
+    Widget btn(IconData icon, String label, Color color, VoidCallback onTap) =>
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 17, color: color),
+            label: Text(label,
+                style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: QDPalette.neutral200),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(QDSpace.screenPad, 4, QDSpace.screenPad, 4),
+      child: Row(children: [
+        btn(Icons.call_rounded, 'Call', QDPalette.success500, () => _call(phone)),
+        const SizedBox(width: 8),
+        btn(Icons.chat_rounded, 'WhatsApp', const Color(0xFF25D366), () => _whatsApp(phone)),
+        const SizedBox(width: 8),
+        btn(Icons.sms_outlined, 'SMS', QDPalette.info500, () => _sms(phone)),
+      ]),
+    );
+  }
+
   Color _statusColor(String s) => switch (s.toUpperCase()) {
     'BOOKED'      => QDPalette.info500,
     'SCHEDULED'   => QDPalette.info500,
@@ -213,6 +258,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             ),
           ],
         ]),
+        if (a.customerPhone != null && a.customerPhone!.isNotEmpty)
+          _contactRow(a.customerPhone!),
 
         if (a.notes != null && a.notes!.isNotEmpty) ...[
           const SizedBox(height: QDSpace.cardGap),
