@@ -176,7 +176,10 @@ class BusinessRepository {
   Future<Map<String, dynamic>?> getSubscription(int tenantId) async {
     try {
       final res = await _dio.get(ApiEndpoints.subscription(tenantId));
-      return _mapData(res);
+      final data = _mapData(res);
+      // API returns null body when the business has no subscription yet;
+      // an empty map must not render as a phantom "UNKNOWN" plan.
+      return data.isEmpty ? null : data;
     } catch (_) {
       return null;
     }

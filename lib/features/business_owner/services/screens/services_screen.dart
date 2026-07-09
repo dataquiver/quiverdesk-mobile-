@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
@@ -281,8 +282,9 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
     try {
+      // Backend CreateServiceRequest binds 'name'; code is auto-generated server-side.
       final payload = {
-        'serviceName': _name.text.trim(),
+        'name': _name.text.trim(),
         'price': double.parse(_price.text),
         'durationMinutes': int.parse(_duration.text),
         'category': _category,
@@ -297,9 +299,12 @@ class _AddServiceSheetState extends State<_AddServiceSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
+        String message = 'Could not save the service. Please try again.';
+        if (e is DioException && e.response?.data is Map) {
+          message = e.response!.data['message'] as String? ?? message;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()),
-              backgroundColor: QDPalette.error500),
+          SnackBar(content: Text(message), backgroundColor: QDPalette.error500),
         );
         setState(() => _loading = false);
       }
