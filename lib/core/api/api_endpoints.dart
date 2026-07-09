@@ -21,6 +21,14 @@ class ApiEndpoints {
   static String appointmentFeedback(int tenantId, int id) => '/api/business/$tenantId/appointments/$id/feedback';
   static String reports(int tenantId) => '/api/business/$tenantId/reports';
   static String subscription(int tenantId) => '/api/business/$tenantId/subscription';
+  static String subscriptionPlanOptions(int tenantId) => '/api/business/$tenantId/subscription/plans';
+
+  // BUSINESS OWNER — subscription payments (Razorpay)
+  static String paymentCreateOrder(int tenantId) => '/api/business/$tenantId/payments/create-order';
+  static String paymentVerify(int tenantId) => '/api/business/$tenantId/payments/verify';
+  static String paymentHistory(int tenantId) => '/api/business/$tenantId/payments/history';
+  static String paymentSubscriptionStatus(int tenantId) => '/api/business/$tenantId/payments/subscription-status';
+  static String paymentCancelSubscription(int tenantId) => '/api/business/$tenantId/payments/cancel-subscription';
 
   // STAFF
   static String staffDayView(int tenantId) => '/api/staff/$tenantId/my-day';

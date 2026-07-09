@@ -190,6 +190,50 @@ class BusinessRepository {
     return _mapData(res);
   }
 
+  // ── Subscription payments (Razorpay) ──────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getSubscriptionPlanOptions(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.subscriptionPlanOptions(tenantId));
+    return _toList(_anyData(res)).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createPaymentOrder(
+    int tenantId, {
+    required String planCode,
+    required String billingCycle,
+  }) async {
+    final res = await _dio.post(ApiEndpoints.paymentCreateOrder(tenantId), data: {
+      'planCode': planCode,
+      'billingCycle': billingCycle,
+    });
+    return _mapData(res);
+  }
+
+  Future<Map<String, dynamic>> verifyPayment(
+    int tenantId, {
+    required int paymentOrderId,
+    required String gatewayOrderId,
+    required String gatewayPaymentId,
+    required String gatewaySignature,
+  }) async {
+    final res = await _dio.post(ApiEndpoints.paymentVerify(tenantId), data: {
+      'paymentOrderId': paymentOrderId,
+      'gatewayOrderId': gatewayOrderId,
+      'gatewayPaymentId': gatewayPaymentId,
+      'gatewaySignature': gatewaySignature,
+    });
+    return _mapData(res);
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentHistory(int tenantId) async {
+    final res = await _dio.get(ApiEndpoints.paymentHistory(tenantId));
+    return _toList(_anyData(res)).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> cancelSubscription(int tenantId) async {
+    await _dio.post(ApiEndpoints.paymentCancelSubscription(tenantId));
+  }
+
   // Returns data as Map, unwrapping {data: ...} wrapper if present.
   Map<String, dynamic> _mapData(Response res) {
     final body = res.data;
