@@ -273,7 +273,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                         _label('Pick a date *'),
                         _dateStrip(),
                         const SizedBox(height: QDSpace.x4),
-                        _label('Pick a time *'),
+                        _label('Pick a time * (${_selectedService!.durationMinutes} min per slot)'),
                         _slotGrid(),
                         const SizedBox(height: QDSpace.x4),
                       ],
