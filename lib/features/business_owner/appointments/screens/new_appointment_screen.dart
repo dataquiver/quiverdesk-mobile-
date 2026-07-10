@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
@@ -31,9 +33,14 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   CustomerModel? _selectedCustomer;
   ServiceModel? _selectedService;
-  StaffMemberModel? _selectedStaff;
+  StaffMemberModel? _selectedStaff;   // null = any available staff
   DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+
+  // Slot picker — the availability engine decides what is bookable
+  Map<String, dynamic>? _slotsData;
+  bool _slotsLoading = false;
+  String? _selectedSlotStart;
+  String? _selectedSlotEnd;
 
   @override
   void initState() {
@@ -96,31 +103,44 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     }
   }
 
-  Future<void> _pickDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (d != null && mounted) setState(() => _selectedDate = d);
+  String get _dateIso =>
+      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+  Future<void> _loadSlots() async {
+    if (_tenantId == null || _selectedService == null) return;
+    setState(() {
+      _slotsLoading = true;
+      _slotsData = null;
+      _selectedSlotStart = null;
+      _selectedSlotEnd = null;
+    });
+    try {
+      final data = await _repo.getAvailableSlots(_tenantId!,
+          date: _dateIso,
+          serviceId: _selectedService!.serviceId,
+          staffId: _selectedStaff?.personTenantRoleId);
+      if (mounted) setState(() { _slotsData = data; _slotsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _slotsLoading = false);
+    }
   }
 
-  Future<void> _pickTime() async {
-    final t = await showTimePicker(context: context, initialTime: _selectedTime);
-    if (t != null && mounted) setState(() => _selectedTime = t);
+  void _selectDate(DateTime d) {
+    setState(() => _selectedDate = d);
+    _loadSlots();
   }
-
-  String _timeStr(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:00';
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedCustomer == null ||
-        _selectedService == null ||
-        _selectedStaff == null) {
+    if (_selectedCustomer == null || _selectedService == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(content: Text('Please select a customer and service')),
+      );
+      return;
+    }
+    if (_selectedSlotStart == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please pick an available time slot')),
       );
       return;
     }
@@ -129,23 +149,43 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     try {
       await _repo.createAppointment(_tenantId!, {
         'customerPersonId': _selectedCustomer!.personId,
-        'assignedToPersonTenantRoleId': _selectedStaff!.personTenantRoleId,
+        // null = backend auto-assigns the least-loaded available staff
+        'assignedToPersonTenantRoleId': _selectedStaff?.personTenantRoleId,
         'services': [{'serviceId': _selectedService!.serviceId, 'quantity': 1}],
-        'appointmentDate': _selectedDate.toIso8601String().split('T').first,
-        'startTime': _timeStr(_selectedTime),
+        'appointmentDate': _dateIso,
+        'startTime': '$_selectedSlotStart:00',
+        'endTime': '$_selectedSlotEnd:00',
         if (_notesCtrl.text.trim().isNotEmpty) 'notes': _notesCtrl.text.trim(),
       });
       if (mounted) {
+        HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment created!')),
+          const SnackBar(content: Text('Appointment booked!')),
         );
         context.pop();
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      if (e.response?.statusCode == 409) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This slot was just taken! Showing updated availability.'),
+          backgroundColor: QDPalette.warning500,
+        ));
+        _loadSlots();
+      } else {
+        final msg = e.response?.data is Map
+            ? (e.response!.data['message'] as String? ?? 'Booking failed.')
+            : 'Booking failed. Check your connection.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: QDPalette.error500),
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'),
+          const SnackBar(content: Text('Booking failed. Please try again.'),
               backgroundColor: QDPalette.error500),
         );
       }
@@ -209,53 +249,34 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                         items: _services,
                         display: (s) =>
                             '${s.serviceName} – ₹${s.price.toStringAsFixed(0)}',
-                        onChanged: (v) =>
-                            setState(() => _selectedService = v),
+                        onChanged: (v) {
+                          setState(() => _selectedService = v);
+                          _loadSlots();
+                        },
                       ),
                       const SizedBox(height: QDSpace.x4),
 
-                      _label('Staff *'),
-                      _dropdown<StaffMemberModel>(
-                        hint: 'Assign staff',
+                      _label('Staff'),
+                      _dropdown<StaffMemberModel?>(
+                        hint: 'Any available staff',
                         value: _selectedStaff,
-                        items: _staff,
-                        display: (s) => s.fullName,
-                        onChanged: (v) => setState(() => _selectedStaff = v),
+                        items: [null, ..._staff],
+                        display: (s) => s?.fullName ?? 'Any available staff',
+                        onChanged: (v) {
+                          setState(() => _selectedStaff = v);
+                          _loadSlots();
+                        },
                       ),
                       const SizedBox(height: QDSpace.x4),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _label('Date *'),
-                                _dateTile(
-                                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                  Icons.calendar_today_outlined,
-                                  _pickDate,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: QDSpace.x3),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _label('Time *'),
-                                _dateTile(
-                                  _selectedTime.format(context),
-                                  Icons.access_time_outlined,
-                                  _pickTime,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: QDSpace.x4),
+                      if (_selectedService != null) ...[
+                        _label('Pick a date *'),
+                        _dateStrip(),
+                        const SizedBox(height: QDSpace.x4),
+                        _label('Pick a time *'),
+                        _slotGrid(),
+                        const SizedBox(height: QDSpace.x4),
+                      ],
 
                       _label('Notes (optional)'),
                       TextFormField(
@@ -319,29 +340,171 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     );
   }
 
-  Widget _dateTile(String label, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: QDPalette.surfaceCard,
-          borderRadius: BorderRadius.circular(QDRadius.input),
-          border: Border.all(color: QDPalette.neutral200),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: QDPalette.primary500),
-            const SizedBox(width: 8),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: QDPalette.neutral800)),
-          ],
-        ),
+  /// Horizontal strip of the next 14 days.
+  Widget _dateStrip() {
+    final today = DateTime.now();
+    return SizedBox(
+      height: 68,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 14,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final d = DateTime(today.year, today.month, today.day).add(Duration(days: i));
+          final selected = d.year == _selectedDate.year &&
+              d.month == _selectedDate.month && d.day == _selectedDate.day;
+          const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          final label = i == 0 ? 'Today' : i == 1 ? 'Tmrw' : days[d.weekday - 1];
+          return GestureDetector(
+            onTap: () => _selectDate(d),
+            child: Container(
+              width: 60,
+              decoration: BoxDecoration(
+                color: selected ? QDPalette.primary50 : QDPalette.surfaceCard,
+                borderRadius: BorderRadius.circular(QDRadius.md),
+                border: Border.all(
+                    color: selected ? QDPalette.primary500 : QDPalette.neutral200,
+                    width: selected ? 1.5 : 1),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                          color: selected ? QDPalette.primary600 : QDPalette.neutral400)),
+                  const SizedBox(height: 2),
+                  Text('${d.day}',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+                          color: selected ? QDPalette.primary600 : QDPalette.neutral800)),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  /// Grid of engine-approved time slots grouped by period.
+  Widget _slotGrid() {
+    if (_slotsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator(color: QDPalette.primary500)),
+      );
+    }
+    final data = _slotsData;
+    if (data == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('Select a service to see available times.',
+            style: TextStyle(fontSize: 13, color: QDPalette.neutral400)),
+      );
+    }
+    if (data['isBusinessOpen'] != true) {
+      return _slotNote(data['closedReason'] as String? ?? 'Business is closed on this day.');
+    }
+    final slots = (data['slots'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final available = slots.where((s) => s['isAvailable'] == true).length;
+    if (available == 0) {
+      final next = data['nextAvailableDate'] as String?;
+      return _slotNote(next != null
+          ? 'No slots on this day. Next available: $next'
+          : 'No slots available on this day.');
+    }
+
+    Widget period(String name, bool Function(int hour) match) {
+      final group = slots.where((s) {
+        final hour = int.tryParse((s['startTime'] as String).split(':').first) ?? 0;
+        return match(hour);
+      }).toList();
+      if (group.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
+            child: Text(name,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                    color: QDPalette.neutral400, letterSpacing: .5)),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: group.map((s) {
+              final start = s['startTime'] as String;
+              final ok = s['isAvailable'] == true;
+              final selected = _selectedSlotStart == start;
+              return GestureDetector(
+                onTap: ok
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _selectedSlotStart = start;
+                          _selectedSlotEnd = s['endTime'] as String;
+                        });
+                      }
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? QDPalette.primary500
+                        : ok ? QDPalette.surfaceCard : QDPalette.neutral100,
+                    borderRadius: BorderRadius.circular(QDRadius.sm),
+                    border: Border.all(
+                        color: selected
+                            ? QDPalette.primary500
+                            : ok ? QDPalette.success500 : QDPalette.neutral200),
+                  ),
+                  child: Text(
+                    _format12h(start),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? Colors.white
+                          : ok ? QDPalette.neutral800 : QDPalette.neutral400,
+                      decoration: ok ? null : TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        period('MORNING', (h) => h < 12),
+        period('AFTERNOON', (h) => h >= 12 && h < 17),
+        period('EVENING', (h) => h >= 17),
+      ],
+    );
+  }
+
+  Widget _slotNote(String text) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: QDPalette.warningBg,
+          borderRadius: BorderRadius.circular(QDRadius.md),
+        ),
+        child: Text(text,
+            style: const TextStyle(fontSize: 13, color: QDPalette.warning500,
+                fontWeight: FontWeight.w600)),
+      );
+
+  static String _format12h(String hhmm) {
+    final parts = hhmm.split(':');
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = parts.length > 1 ? parts[1] : '00';
+    final period = h >= 12 ? 'PM' : 'AM';
+    final display = h % 12 == 0 ? 12 : h % 12;
+    return '$display:$m $period';
   }
 }
 
