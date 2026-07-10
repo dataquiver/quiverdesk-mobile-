@@ -27,7 +27,21 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build apk --release
+      - name: Build release APK
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee build.log
+
+      # Annotations are readable via the public API, unlike step logs
+      - name: Surface build errors as annotations
+        if: failure()
+        run: |
+          grep -E "error:|Error:|FAILURE:|Caused by|What went wrong|Execution failed" -A 2 build.log | head -25 | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::$line"
+          done
+          tail -5 build.log | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::TAIL: $line"
+          done
 
       - name: Rename APK with version
         run: cp build/app/outputs/flutter-apk/app-release.apk quiverdesk-${{ github.ref_name }}.apk
