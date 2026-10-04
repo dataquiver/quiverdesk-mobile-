@@ -18,6 +18,7 @@ import '../features/business_owner/crm/screens/crm_screen.dart';
 import '../features/business_owner/memberships/screens/memberships_screen.dart';
 import '../features/business_owner/feedback/screens/feedback_screen.dart';
 import '../features/business_owner/subscription/screens/subscription_screen.dart';
+import '../features/business_owner/billing/screens/walk_in_billing_screen.dart';
 import '../features/staff/dashboard/screens/staff_dashboard_screen.dart';
 import '../features/staff/appointments/screens/staff_appointments_screen.dart';
 import '../features/staff/appointments/screens/staff_appointment_detail_screen.dart';
@@ -32,6 +33,7 @@ import '../features/platform_admin/payments/screens/platform_payments_screen.dar
 import '../features/platform_admin/vouchers/screens/platform_vouchers_screen.dart';
 import '../features/platform_admin/reports/screens/platform_reports_screen.dart';
 import '../features/platform_admin/notifications/screens/platform_notifications_screen.dart';
+import '../features/platform_admin/businesses/screens/onboard_business_screen.dart';
 import '../features/shared/shells/business_shell.dart';
 import '../features/shared/shells/staff_shell.dart';
 import '../features/shared/shells/platform_shell.dart';
@@ -63,6 +65,7 @@ class AppRoutes {
   static const businessMemberships = '/business/memberships';
   static const businessFeedback = '/business/feedback';
   static const businessSubscription = '/business/subscription';
+  static const walkInBilling = '/business/billing/walkin';
 
   // Staff (shell tabs)
   static const staffDashboard = '/staff/dashboard';
@@ -81,6 +84,7 @@ class AppRoutes {
   static const businessAdminDetail = '/platform/businesses/:id';
 
   // Platform Admin extra screens (push navigation)
+  static const onboardBusiness = '/platform/onboard-business';
   static const platformPlans = '/platform/plans';
   static const platformFeatures = '/platform/features';
   static const platformPayments = '/platform/payments';
@@ -92,13 +96,17 @@ class AppRoutes {
 final appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
   redirect: (context, state) async {
-    final isAuth = await TokenStorage.hasValidToken();
-    final loc = state.matchedLocation;
-    final isPublic = loc == AppRoutes.login ||
-        loc == AppRoutes.splash ||
-        loc == AppRoutes.register;
-    if (!isAuth && !isPublic) return AppRoutes.login;
-    return null;
+    try {
+      final isAuth = await TokenStorage.hasValidToken();
+      final loc = state.matchedLocation;
+      final isPublic = loc == AppRoutes.login ||
+          loc == AppRoutes.splash ||
+          loc == AppRoutes.register;
+      if (!isAuth && !isPublic) return AppRoutes.login;
+      return null;
+    } catch (_) {
+      return AppRoutes.login;
+    }
   },
   routes: [
     GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
@@ -140,6 +148,7 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.businessMemberships, builder: (_, __) => const MembershipsScreen()),
     GoRoute(path: AppRoutes.businessFeedback, builder: (_, __) => const FeedbackScreen()),
     GoRoute(path: AppRoutes.businessSubscription, builder: (_, __) => const SubscriptionScreen()),
+    GoRoute(path: AppRoutes.walkInBilling, builder: (_, __) => const WalkInBillingScreen()),
 
     // Staff shell
     ShellRoute(
@@ -178,6 +187,7 @@ final appRouter = GoRouter(
     ),
 
     // Platform Admin extra screens (push, no shell)
+    GoRoute(path: AppRoutes.onboardBusiness, builder: (_, __) => const OnboardBusinessScreen()),
     GoRoute(path: AppRoutes.platformPlans, builder: (_, __) => const PlatformPlansScreen()),
     GoRoute(path: AppRoutes.platformFeatures, builder: (_, __) => const PlatformFeaturesScreen()),
     GoRoute(path: AppRoutes.platformPayments, builder: (_, __) => const PlatformPaymentsScreen()),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -13,6 +14,7 @@ class TokenStorage {
   static const _keyUserId = 'qd_user_id';
   static const _keyBusinessId = 'qd_business_id';
   static const _keyUserEmail = 'qd_user_email';
+  static const _keyPersonTenantRoleId = 'qd_person_tenant_role_id';
 
   static Future<void> saveTokens({
     required String accessToken,
@@ -30,6 +32,7 @@ class TokenStorage {
     required String userId,
     String? businessId,
     String? email,
+    String? personTenantRoleId,
   }) async {
     await _storage.write(key: _keyUserRole, value: role);
     await _storage.write(key: _keyUserName, value: name);
@@ -40,6 +43,9 @@ class TokenStorage {
     if (email != null) {
       await _storage.write(key: _keyUserEmail, value: email);
     }
+    if (personTenantRoleId != null) {
+      await _storage.write(key: _keyPersonTenantRoleId, value: personTenantRoleId);
+    }
   }
 
   static Future<String?> getAccessToken() => _storage.read(key: _keyAccessToken);
@@ -49,13 +55,19 @@ class TokenStorage {
   static Future<String?> getUserId() => _storage.read(key: _keyUserId);
   static Future<String?> getBusinessId() => _storage.read(key: _keyBusinessId);
   static Future<String?> getUserEmail() => _storage.read(key: _keyUserEmail);
+  static Future<String?> getPersonTenantRoleId() => _storage.read(key: _keyPersonTenantRoleId);
 
   static Future<void> clearAll() async => _storage.deleteAll();
 
   static Future<bool> hasValidToken() async {
-    final token = await getAccessToken();
-    if (token == null || token.isEmpty) return false;
-    return !_isExpired(token);
+    try {
+      final token = await getAccessToken()
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      if (token == null || token.isEmpty) return false;
+      return !_isExpired(token);
+    } catch (_) {
+      return false;
+    }
   }
 
   static bool _isExpired(String token) {
