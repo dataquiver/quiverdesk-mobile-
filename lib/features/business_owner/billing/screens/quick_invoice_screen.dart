@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/models/invoice_model.dart';
@@ -26,7 +28,14 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
   int? _tenantId;
   String _selectedStatus = 'ALL';
 
-  static const _statuses = ['ALL', 'UNPAID', 'PARTIAL', 'PAID'];
+  // Display labels → actual API status codes used in query param
+  static const _statuses = ['ALL', 'ISSUED', 'PARTIALLY_PAID', 'PAID'];
+  static const _statusLabels = {
+    'ALL': 'All',
+    'ISSUED': 'Unpaid',
+    'PARTIALLY_PAID': 'Partial',
+    'PAID': 'Paid',
+  };
 
   double get _totalRevenue => _items.fold(0, (s, i) => s + i.totalAmount);
   double get _totalPaid => _items.fold(0, (s, i) => s + i.paidAmount);
@@ -60,23 +69,34 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
   }
 
   Color _statusColor(String s) => switch (s.toUpperCase()) {
-    'PAID'    => QDPalette.success500,
-    'UNPAID'  => QDPalette.error500,
-    'PARTIAL' => QDPalette.warning500,
-    _         => QDPalette.neutral400,
+    'PAID'           => QDPalette.success500,
+    'ISSUED'         => QDPalette.error500,
+    'PARTIALLY_PAID' => QDPalette.warning500,
+    _                => QDPalette.neutral400,
   };
 
   Color _statusBg(String s) => switch (s.toUpperCase()) {
-    'PAID'    => QDPalette.successBg,
-    'UNPAID'  => QDPalette.errorBg,
-    'PARTIAL' => QDPalette.warningBg,
-    _         => QDPalette.neutral50,
+    'PAID'           => QDPalette.successBg,
+    'ISSUED'         => QDPalette.errorBg,
+    'PARTIALLY_PAID' => QDPalette.warningBg,
+    _                => QDPalette.neutral50,
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: QDPalette.surfaceBackground,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          HapticFeedback.selectionClick();
+          await context.push(AppRoutes.walkInBilling);
+          _load();
+        },
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Walk-in Bill'),
+        backgroundColor: QDPalette.primary500,
+        foregroundColor: Colors.white,
+      ),
       appBar: AppBar(
         title: const Text('Billing'),
         actions: [
@@ -131,7 +151,7 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
                           final s = _statuses[i];
                           final selected = s == _selectedStatus;
                           return FilterChip(
-                            label: Text(s == 'ALL' ? 'All' : s),
+                            label: Text(_statusLabels[s] ?? s),
                             selected: selected,
                             onSelected: (_) {
                               setState(() => _selectedStatus = s);
@@ -182,12 +202,59 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
     );
   }
 
+  Future<void> _sendWhatsApp(InvoiceModel inv) async {
+    if (_tenantId == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sending invoice to customer WhatsApp…')),
+    );
+    try {
+      await _repo.sendInvoiceWhatsApp(_tenantId!, inv.invoiceId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invoice sent to customer WhatsApp!'),
+            backgroundColor: QDPalette.success500,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not send: $e'),
+            backgroundColor: QDPalette.error500,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareInvoicePdf(InvoiceModel inv) async {
+    if (_tenantId == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing invoice PDF…')),
+    );
+    try {
+      final bytes = await _repo.downloadInvoicePdf(_tenantId!, inv.invoiceId);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile.fromData(bytes, name: 'Invoice_${inv.invoiceNumber}.pdf', mimeType: 'application/pdf')],
+          subject: 'Invoice #${inv.invoiceNumber} — ${inv.customerName}',
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not download PDF: $e'), backgroundColor: QDPalette.error500),
+        );
+      }
+    }
+  }
+
   Future<void> _openPayment(InvoiceModel inv) async {
     if (_tenantId == null) return;
     if (inv.isPaid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invoice already paid')),
-      );
+      _shareInvoicePdf(inv);
       return;
     }
     final paid = await showModalBottomSheet<bool>(
@@ -206,20 +273,20 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
   Widget _card(InvoiceModel inv) {
     final sc = _statusColor(inv.status);
     final bg = _statusBg(inv.status);
-    return GestureDetector(
-      onTap: () => _openPayment(inv),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: QDSpace.x2),
-        padding: const EdgeInsets.all(QDSpace.cardPad),
-        decoration: BoxDecoration(
-          color: QDPalette.surfaceCard,
-          borderRadius: BorderRadius.circular(QDRadius.card),
-          border: Border.all(color: QDPalette.neutral100),
-          boxShadow: QDShadow.card,
-        ),
-        child: Row(
-          children: [
-            Container(
+    return Container(
+      margin: const EdgeInsets.only(bottom: QDSpace.x2),
+      padding: const EdgeInsets.all(QDSpace.cardPad),
+      decoration: BoxDecoration(
+        color: QDPalette.surfaceCard,
+        borderRadius: BorderRadius.circular(QDRadius.card),
+        border: Border.all(color: QDPalette.neutral100),
+        boxShadow: QDShadow.card,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _openPayment(inv),
+            child: Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
@@ -228,8 +295,11 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
               ),
               child: Icon(Icons.receipt_outlined, color: sc, size: 22),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _openPayment(inv),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -240,33 +310,51 @@ class _QuickInvoiceScreenState extends State<QuickInvoiceScreen> {
                           color: QDPalette.neutral800)),
                   const SizedBox(height: 2),
                   Text(
-                    '#${inv.invoiceId} · ${QDDateUtils.formatDate(inv.invoiceDate)}',
+                    '#${inv.invoiceNumber} · ${QDDateUtils.formatDate(inv.invoiceDate)}',
                     style: const TextStyle(
                         color: QDPalette.neutral400, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(QDCurrency.format(inv.totalAmount),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: QDPalette.neutral900,
-                        letterSpacing: -0.3)),
-                const SizedBox(height: 4),
-                QDStatusChip.fromStatus(inv.status),
-                if (!inv.isPaid) ...[
-                  const SizedBox(height: 4),
-                  const Icon(Icons.payments_outlined,
-                      size: 14, color: QDPalette.primary500),
-                ],
-              ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(QDCurrency.format(inv.totalAmount),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: QDPalette.neutral900,
+                      letterSpacing: -0.3)),
+              const SizedBox(height: 4),
+              QDStatusChip.fromStatus(inv.status),
+            ],
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              if (inv.isPaid) {
+                _shareInvoicePdf(inv);
+              } else {
+                _openPayment(inv);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: inv.isPaid ? QDPalette.primary50 : QDPalette.successBg,
+                borderRadius: BorderRadius.circular(QDRadius.xs),
+              ),
+              child: Icon(
+                inv.isPaid ? Icons.picture_as_pdf_outlined : Icons.payments_outlined,
+                size: 16,
+                color: inv.isPaid ? QDPalette.primary500 : QDPalette.success500,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -345,9 +433,13 @@ class _CollectPaymentSheetState extends State<_CollectPaymentSheet> {
     }
     setState(() => _saving = true);
     try {
+      final today = DateTime.now();
+      final dateStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
       await widget.repo.collectPayment(widget.tenantId, widget.invoice.invoiceId, {
         'amount': amount,
-        'paymentMethod': _method,
+        'paymentMode': _method,
+        'paymentDate': dateStr,
       });
       if (mounted) Navigator.pop(context, true);
     } catch (e) {

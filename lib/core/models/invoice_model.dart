@@ -1,5 +1,6 @@
 class InvoiceModel {
   final int invoiceId;
+  final String invoiceNumber;
   final String customerName;
   final String? customerPhone;
   final double totalAmount;
@@ -11,6 +12,7 @@ class InvoiceModel {
 
   const InvoiceModel({
     required this.invoiceId,
+    required this.invoiceNumber,
     required this.customerName,
     this.customerPhone,
     required this.totalAmount,
@@ -31,36 +33,42 @@ class InvoiceModel {
         .toList();
     return InvoiceModel(
       invoiceId: json['invoiceId'] as int,
+      invoiceNumber: json['invoiceNumber'] as String? ?? '',
       customerName: json['customerName'] as String? ?? '',
-      customerPhone: json['customerPhone'] as String?,
+      customerPhone: json['customerPhone'] as String? ?? json['customerMobile'] as String?,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0.0,
-      status: json['status'] as String? ?? 'UNPAID',
+      status: json['status'] as String? ?? 'ISSUED',
       paymentMode: json['paymentMode'] as String?,
-      invoiceDate: DateTime.tryParse(json['invoiceDate'] ?? '') ?? DateTime.now(),
+      invoiceDate: DateTime.tryParse(
+              json['invoiceDate'] as String? ?? json['createdOn'] as String? ?? '') ??
+          DateTime.now(),
       items: itemList,
     );
   }
 }
 
 class InvoiceItem {
-  final String serviceName;
-  final double price;
-  final int quantity;
+  final String description;
+  final double unitPrice;
+  final double quantity;
 
   const InvoiceItem({
-    required this.serviceName,
-    required this.price,
+    required this.description,
+    required this.unitPrice,
     required this.quantity,
   });
 
-  double get total => price * quantity;
+  double get total => unitPrice * quantity;
 
   factory InvoiceItem.fromJson(Map<String, dynamic> json) {
     return InvoiceItem(
-      serviceName: json['serviceName'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      quantity: json['quantity'] as int? ?? 1,
+      // Backend: InvoiceItemDto.Description and UnitPrice
+      description: json['description'] as String? ??
+          json['serviceName'] as String? ?? '',
+      unitPrice: (json['unitPrice'] as num?)?.toDouble() ??
+          (json['price'] as num?)?.toDouble() ?? 0.0,
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
     );
   }
 }
